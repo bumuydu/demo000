@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "Filters.h"
 
 // Sembrano classi lunghe, ma se eliminate i commenti diventa tutto molto snello
 // ===================================================================================
@@ -57,11 +58,10 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f)
-		: ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel)
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise)
 	{
-		/*auto& masterGain = processorChain.get<masterGainIndex>();
-		masterGain.setGainLinear(0.7f);*/
+
 	};
 	
 	~SimpleSynthVoice() {};
@@ -76,6 +76,11 @@ public:
 		// (per questo esempio non servono meccanismi più raffinati)
 		return dynamic_cast<MySynthSound*>(sound) != nullptr;
 	}
+    
+    void releaseResources()
+    {
+        //noiseEnvelope.setSize(0, 0);
+    }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
@@ -83,33 +88,30 @@ public:
 		// Reset phase for each oscillator
 		for (auto& oscillator : oscillators)
 		{
-			oscillator.reset(); // trying to get rid of pops and buzzes. update: couldn't :( maybe it's a voice stealing issue?
+			oscillator.reset(); // got rid of pops
 		}
+        noiseOscillator.reset();
+        subOscillator.reset();
+        
 		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-		// Cambio frequenza all'oscillatore (il secondo argomento a true indica di NON usare smoothed value)
-		//sawOscillator.setFrequency(baseFreq, true);
-
 		// set the detuned oscillators' frequencies
 		float detunedFreq1 = baseFreq * cent;
 		float detunedFreq2 = baseFreq / cent;
-
-		// the method that is on the JUCE tutorial --> did not help bc it was based on MPESynthesiser
-		// felt like a different approach
-		//processorChain.get<osc1Index>().setFrequency(baseFreq, true);
-		//processorChain.get<osc1Index>().setLevel(velocity);
-		//processorChain.get<osc2Index>().setFrequency(detunedFreq1, true);    
-		//processorChain.get<osc2Index>().setLevel(velocity);                  
-
+        
+        // modify: the sub's frequency for now, will just be one octave lower. I will add the register parameter later on
+        float subFreq = baseFreq / 2;
+        
+        // Cambio frequenza all'oscillatore (il secondo argomento a true indica di NON usare smoothed value)
 		// set the frequencies
-		//sawOscillator2.setFrequency(detunedFreq1, true);
-		//sawOscillator3.setFrequency(detunedFreq2, true);
-
 		oscillators[0].setFrequency(baseFreq, true);
 		oscillators[1].setFrequency(detunedFreq1, true);
 		oscillators[2].setFrequency(detunedFreq2, true);
+        
+        subOscillator.setFrequency(subFreq);
 
 		// Triggero l'ADSR
 		ampAdsr.noteOn();
+        noiseAdsr.noteOn();
 
 		// Mi salvo la velocity da usare come volume della nota suonata
 		velocityLevel = velocity;
@@ -120,10 +122,11 @@ public:
 	{
 		// Triggero la fase di release dell'ADSR
 		ampAdsr.noteOff();
+        noiseAdsr.noteOff();
 
 		// Se mi chiede di non generare code (o altri casi, tipo se l'ADSR ha già finito la fase di release)
 		// allora segnalo alla classe Synthesiser che questa voce è libera per poter riprodurre altri suoni
-		if (!allowTailOff || !ampAdsr.isActive())
+        if (!allowTailOff || ( !ampAdsr.isActive() && !noiseAdsr.isActive()))
 			clearCurrentNote();
 	}
 	
@@ -162,36 +165,58 @@ public:
 		// (userò solo i primi "numSamples" del buffer, da sommare poi nel
 		// buffer di output, da startSample, per numSamples campioni)
 		oscillatorBuffer.clear(0, numSamples);
+        subBuffer.clear(0, numSamples);
+        noiseBuffer.clear(0, numSamples);
+        
+        //DBG("Noise Gain: " << noiseGain);
 
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
 		dsp::AudioBlock<float> audioBlock{ voiceData, 1, (size_t)numSamples };
 		dsp::ProcessContextReplacing<float> context{ audioBlock };
+        
+        auto subData = subBuffer.getArrayOfWritePointers();
+        dsp::AudioBlock<float> subAudioBlock{ subData, 1, (size_t)numSamples };
+        dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
+        
+        auto noiseData = noiseBuffer.getArrayOfWritePointers();
+        dsp::AudioBlock<float> noiseAudioBlock{ noiseData, 1, (size_t)numSamples };
+        dsp::ProcessContextReplacing<float> noiseContext{ noiseAudioBlock };
 
-		// Genero la mia forma d'onda
-		//sawOscillator.process(context);
-
-		//processorChain.process(context);
-
+		// Genero la mie forme d'onda
+        // SHOULD BECOME A NORMAL FOR LOOP WITH N (# OF VOICES) -- N will also become a param
 		for (auto& oscillator : oscillators)
 		{
 			oscillator.process(context);
 		}
+        subOscillator.process(subContext);
+        noiseOscillator.process(noiseContext);
+        
+        //noiseEnvelope.setSample(0, timeStamp, velocity);
+        //egNoise.processBlock(noiseEnvelope, numSamples);
 
 		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
 
+        
 		// La modulo in ampiezza con l'ADSR
 		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
+        ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
+        noiseAdsr.applyEnvelopeToBuffer(noiseBuffer, 0, numSamples);
+        //noiseAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
-		oscillatorBuffer.applyGain(0, numSamples, velocityLevel);
+		oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain);
+        subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
+        noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
 
 		// Copio il segnale generato nel buffer di output considerando la porzione di competenza
 		outputBuffer.addFrom(0, startSample, oscillatorBuffer, 0, 0, numSamples);
+        outputBuffer.addFrom(0, startSample, subBuffer, 0, 0, numSamples);
+        outputBuffer.addFrom(0, startSample, noiseBuffer, 0, 0, numSamples);
 
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
-		if (!ampAdsr.isActive())
+        if (!ampAdsr.isActive() && !noiseAdsr.isActive())
 			clearCurrentNote();
 	}
 
@@ -202,9 +227,18 @@ public:
 	// ma è comodo averla per poter usare il sint come un normale Processor
 	void prepareToPlay(double sampleRate, int samplesPerBlock)
 	{
-		// Resetto l'ADSR
+		// Resetto gli ADSR
 		ampAdsr.setSampleRate(sampleRate);
 		ampAdsr.setParameters(ampAdsrParams);
+        
+        noiseAdsr.setSampleRate(sampleRate);
+        noiseAdsr.setParameters(noiseAdsrParams);
+        
+        
+        // We prepare the release envelope generator of the noise osc
+//        egNoise.prepareToPlay(sampleRate);
+//        noiseEnvelope.setSize(1, samplesPerBlock);    // mono
+//        noiseEnvelope.clear();
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
 		dsp::ProcessSpec spec;
@@ -213,19 +247,46 @@ public:
 		spec.numChannels = 1;
 
 		// Inizializzo l'oscillatore
-		//processorChain.prepare(spec);
 		for (auto& oscillator : oscillators)
 		{
 			oscillator.prepare(spec);
 		}
+        subOscillator.prepare(spec);
+        noiseOscillator.prepare(spec);
 
 		// Se non ho intenzione di generare un segnale intrinsecamente
 		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
 		// poi nel PluginProcessor lo copio su tutti i canali in uscita
+        // WILL MODIFY THIS PART!
 		oscillatorBuffer.setSize(1, samplesPerBlock);
+        subBuffer.setSize(1, samplesPerBlock);
+        noiseBuffer.setSize(1, samplesPerBlock);
 	}
 	
-	// Setter dei parametri (in questo caso giusto quelli dell'ADSR)
+    // Parameter setters
+    void setSawGain(const float newValue)
+    {
+        sawGain = newValue; // modify: make it smooth
+    }
+    
+    void setSubGain(const float newValue)
+    {
+        subGain = newValue; // modify: smooth it out
+    }
+    
+    void setNoiseGain(const float newValue)
+    {
+        noiseGain = newValue;   // modify: smooth it out
+    }
+    
+    void setNoiseRelease(const float newValue)
+    {
+        //egNoise.setRelease(newValue);
+        noiseAdsrParams.release = newValue;
+        noiseAdsr.setParameters(noiseAdsrParams);
+    }
+    
+	// Setters of JUCE's ADSR parameters -- MODIFY: Add slope param. A,D,R ^slope , S^(1/slope)
 	void setAttack(const float newValue)
 	{
 		ampAdsrParams.attack = newValue;
@@ -259,17 +320,21 @@ private:
 	
 	// sine wave
 	//dsp::Oscillator<float> sinOscillator{ [](float x) {return std::sin(x); } };
-	
-	// saw wave
-	//dsp::Oscillator<float> sawOscillator{ [](float x) {return x / MathConstants<float>::pi; } };
 
 	dsp::Oscillator<float> oscillators[3] =
 	{
 		{ [](float x) {return x / MathConstants<float>::pi; }},	// main saw osc
 		{ [](float x) {return x / MathConstants<float>::pi; }}, // 1st detuned
-		{ [](float x) {return x / MathConstants<float>::pi; }}	// 2nd detuned
-		// 4 more detuned oscillators can be added to obtain the JP8000 supersaw
+		{ [](float x) {return x / MathConstants<float>::pi; }}
+        // to obtain the JP8000 supersaw 4 more detuned oscillators should be added
+//        , { [](float x) {return std::sin(x); }}// sub sine
 	};
+    
+    // Sub Oscillator
+    dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
+    
+    // Noise Oscillator
+    dsp::Oscillator<float> noiseOscillator{[this](float) {return noise.nextFloat() * 2.0f - 1.0f;}};
 
 	// calculating cents to detune
 	// 1 cent is 1/1200 octave
@@ -286,8 +351,25 @@ private:
 	// mentre suonerebbe più naturale averle di tipo esponenziale...
 	ADSR ampAdsr;
 	ADSR::Parameters ampAdsrParams;
+    // ADSR con solo il parametro Release per il noise osc
+    ADSR noiseAdsr;
+    ADSR::Parameters noiseAdsrParams;
+    
+    // We use the JUCE class Random to generate noise
+    Random noise;
+    //AudioBuffer<float> noiseEnvelope;
+    
+    // envelope generator for the noise osc
+    //ReleaseFilter egNoise;
+    
+    // osc level params --> MODIFY: might make a mixer class
+    float sawGain;
+    float subGain;
+    float noiseGain;
 	
 	AudioBuffer<float> oscillatorBuffer;
+    AudioBuffer<float> subBuffer;
+    AudioBuffer<float> noiseBuffer;
 	float velocityLevel = 0.7f;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleSynthVoice)

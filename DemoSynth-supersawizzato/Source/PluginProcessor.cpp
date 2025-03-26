@@ -40,6 +40,9 @@ void DemoSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 
 void DemoSynthAudioProcessor::releaseResources()
 {
+//    for (int v = 0; v < mySynth.getNumVoices(); ++v)
+//        if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
+//            voice->releaseResources();
 }
 
 // Supporta mono o stereo out (input non presente, come definito nel costruttore)
@@ -56,6 +59,8 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 {
     juce::ScopedNoDenormals noDenormals;
     const auto numSamples = buffer.getNumSamples();
+    // for 2x oversampling the saw waves, we double the sampling rate
+    //const auto SRx2 = numSamples * 2;
 
     // Pulisco il buffer (non c'è input, e le SynthVoice sommano, non sovrascrivono)
     buffer.clear();
@@ -91,6 +96,20 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
     for (int v = 0; v < mySynth.getNumVoices(); ++v)
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
         {
+            // OSC levels
+            if (paramID == Parameters::nameSawLev)
+                voice->setSawGain(Decibels::decibelsToGain(newValue, Parameters::dbFloor));
+
+            if (paramID == Parameters::nameSubLev)
+                voice->setSubGain(Decibels::decibelsToGain(newValue, Parameters::dbFloor));
+            
+            if (paramID == Parameters::nameNLev)
+                voice->setNoiseGain(Decibels::decibelsToGain(newValue, Parameters::dbFloor));
+            
+            if (paramID == Parameters::nameNRel)
+                voice->setNoiseRelease(newValue);
+            
+            // ADSR
             if (paramID == Parameters::nameAtk)
                 voice->setAttack(newValue);
 

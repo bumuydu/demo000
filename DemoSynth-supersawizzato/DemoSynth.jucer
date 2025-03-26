@@ -3,11 +3,12 @@
 <JUCERPROJECT id="Rwek1i" name="DemoSynth" projectType="audioplug" displaySplashScreen="1"
               jucerFormatVersion="1" companyName="Laboratorio di Informatica Musicale"
               companyWebsite="www.lim.di.unimi.it" bundleIdentifier="com.lim.DemoSynth"
-              pluginFormats="buildAU,buildStandalone,buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              pluginFormats="buildStandalone,buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
               pluginManufacturer="LIM" pluginManufacturerCode="LIM!" aaxIdentifier="com.lim.DemoSynth"
               defines="JUCE_MODAL_LOOPS_PERMITTED = 1">
   <MAINGROUP id="c1e0SV" name="DemoSynth">
     <GROUP id="{9CD4BB01-4B89-AC5D-07D7-CCF964C7AD84}" name="Source">
+      <FILE id="Wxdhp3" name="Filters.h" compile="0" resource="0" file="Source/Filters.h"/>
       <FILE id="qilZQG" name="PluginParameters.h" compile="0" resource="0"
             file="Source/PluginParameters.h"/>
       <FILE id="SRy0JD" name="Synth.h" compile="0" resource="0" file="Source/Synth.h"/>

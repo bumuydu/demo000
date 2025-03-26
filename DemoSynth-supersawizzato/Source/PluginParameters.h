@@ -3,26 +3,42 @@
 
 namespace Parameters
 {
+    // PARAM IDs
 	static const String nameAtk = "A";
 	static const String nameDcy = "D";
 	static const String nameSus = "S";
 	static const String nameRel = "R";
+    static const String nameSawLev = "SAWLEV";
+    static const String nameSubLev = "SUBLEV";
+    static const String nameNLev = "NOISELEV";
+    static const String nameNRel = "NOISEREL";
 
+    // CONSTANTS
+    static const float dbFloor = -48.0f;
+
+    // PARAM DEFAULTS
 	static const float defaultAtk = 0.000f;
 	static const float defaultDcy = 0.025f;
 	static const float defaultSus = 0.600f;
 	static const float defaultRel = 1.000f;
+    static const float defaultSaw = 0.000f;
+    static const float defaultNoiseRel = 0.025f;
+//    static const float defaultSub = -20.000f;   // I want these two off by default --> set to dbFloor
+//    static const float defaultNoise = -20.000f;
 
-	static const float maxRmsTime = 1.0f;
 
 	static AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 	{
 		std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
-		params.push_back(std::make_unique<AudioParameterFloat>(nameAtk, "Attack (s)",    NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultAtk));
-		params.push_back(std::make_unique<AudioParameterFloat>(nameDcy, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
-		params.push_back(std::make_unique<AudioParameterFloat>(nameSus, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f, 0.010f, 0.5f), defaultSus));
-		params.push_back(std::make_unique<AudioParameterFloat>(nameRel, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSawLev,  1 }, "Sawtooth(s) Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), defaultSaw));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSubLev,  2 }, "Sub Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNLev,  3 }, "Noise Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  4 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultNoiseRel));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameAtk,  5 }, "Attack (s)",    NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultAtk));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDcy,  6 }, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSus,  7 }, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f, 0.010f, 0.5f), defaultSus));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel,  8 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
 
 		return { params.begin(), params.end() };
 	}
