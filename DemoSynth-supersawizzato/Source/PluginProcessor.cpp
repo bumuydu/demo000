@@ -121,6 +121,12 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
 
             if (paramID == Parameters::nameRel)
                 voice->setRelease(newValue);
+            
+            if (paramID == Parameters::nameSubReg)
+                voice->setSubReg(roundToInt(newValue));
+            
+            if (paramID == Parameters::nameSubWf)
+                voice->setSubWf(roundToInt(newValue));
         }
 
 }

@@ -12,6 +12,9 @@ namespace Parameters
     static const String nameSubLev = "SUBLEV";
     static const String nameNLev = "NOISELEV";
     static const String nameNRel = "NOISEREL";
+    static const String nameSubReg = "SUBREG";
+    static const String nameSubWf = "SUBWF";
+    
 
     // CONSTANTS
     static const float dbFloor = -48.0f;
@@ -23,6 +26,10 @@ namespace Parameters
 	static const float defaultRel = 1.000f;
     static const float defaultSaw = 0.000f;
     static const float defaultNoiseRel = 0.025f;
+    
+    static const int defaultSubReg = 0;
+    static const int defaultSubWf = 0;
+    
 //    static const float defaultSub = -20.000f;   // I want these two off by default --> set to dbFloor
 //    static const float defaultNoise = -20.000f;
 
@@ -39,6 +46,9 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDcy,  6 }, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSus,  7 }, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f, 0.010f, 0.5f), defaultSus));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel,  8 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubReg,  9 }, "Sub Register", StringArray{"0","-1","-2"}, defaultSubReg));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf,  10 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
+        //parameters.push_back(std::make_unique<AudioParameterChoice>(nameWaveform, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Saw Down","Square"}, defaultWaveform));
 
 		return { params.begin(), params.end() };
 	}

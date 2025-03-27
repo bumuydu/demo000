@@ -58,8 +58,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise)
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSubReg = 0, int defaultSubWf = 0)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), subWaveform(defaultSubWf)
 	{
 
 	};
@@ -88,7 +88,7 @@ public:
 		// Reset phase for each oscillator
 		for (auto& oscillator : oscillators)
 		{
-			oscillator.reset(); // got rid of pops
+			oscillator.reset();
 		}
         noiseOscillator.reset();
         subOscillator.reset();
@@ -98,8 +98,8 @@ public:
 		float detunedFreq1 = baseFreq * cent;
 		float detunedFreq2 = baseFreq / cent;
         
-        // modify: the sub's frequency for now, will just be one octave lower. I will add the register parameter later on
-        float subFreq = baseFreq / 2;
+        // sub frequency calculation... +1 because the default value = 0 is supposed to be 1 oct below main osc
+        float subFreq = baseFreq / std::pow(2, subRegister + 1);
         
         // Cambio frequenza all'oscillatore (il secondo argomento a true indica di NON usare smoothed value)
 		// set the frequencies
@@ -168,7 +168,7 @@ public:
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
         
-        //DBG("Noise Gain: " << noiseGain);
+        DBG("Noise Gain: " << noiseGain);
 
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
@@ -241,7 +241,7 @@ public:
 //        noiseEnvelope.clear();
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
-		dsp::ProcessSpec spec;
+		
 		spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
@@ -310,15 +310,45 @@ public:
 		ampAdsrParams.release = newValue;
 		ampAdsr.setParameters(ampAdsrParams);
 	}
+    
+    void setSubReg(const int newValue)
+    {
+        subRegister = newValue;
+    }
 
+    void setSubWf(const int newValue)
+    {
+        switch (newValue)
+                {
+                case 0: // sinusoidale
+                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+                    break;
+                case 1: // square
+                    subOscillator = dsp::Oscillator<float> { [](float x)
+                        {
+                            return x > 0.0f ? 1.0f : -1.0f;
+                        } };
+                    break;
+                default:
+                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+                    // info: Sub Oscillator not selected correctly
+                    //jassertfalse;
+                    break;
+                }
+        //dsp::ProcessSpec spec;
+        subOscillator.prepare(spec);
+    }
+    
 private:
 	// La classe dsp::Oscillator può essere inizializzata con una lambda da usare come forma d'onda
 	// (x va da -pi a + pi) e con un intero facoltativo che (se presente e diverso da 0) indica alla
 	// classe di usare una lookup table di quelle dimensioni.
 	// Se si vuole usare un oscillatore dalla forma d'onda variabile o con più parametri è meglio
 	// implementarne uno come quello visto a lezione.
+    
+    dsp::ProcessSpec spec;
 	
-	// sine wave
+    // sine wave
 	//dsp::Oscillator<float> sinOscillator{ [](float x) {return std::sin(x); } };
 
 	dsp::Oscillator<float> oscillators[3] =
@@ -366,6 +396,11 @@ private:
     float sawGain;
     float subGain;
     float noiseGain;
+    
+    // sub params
+    int subRegister;
+    int subWaveform;
+    
 	
 	AudioBuffer<float> oscillatorBuffer;
     AudioBuffer<float> subBuffer;
