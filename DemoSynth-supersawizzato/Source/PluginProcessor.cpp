@@ -127,6 +127,12 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             
             if (paramID == Parameters::nameSubWf)
                 voice->setSubWf(roundToInt(newValue));
+            
+            if (paramID == Parameters::nameFiltHz)
+                voice->setCutoff(newValue);
+            
+            if (paramID == Parameters::nameFiltQ)
+                voice->setQuality(newValue);
         }
 
 }

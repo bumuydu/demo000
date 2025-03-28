@@ -14,6 +14,10 @@ namespace Parameters
     static const String nameNRel = "NOISEREL";
     static const String nameSubReg = "SUBREG";
     static const String nameSubWf = "SUBWF";
+    static const String nameFiltHz = "FREQ";
+    static const String nameFiltQ = "RES";
+//    static const String nameFiltEG = "FILTEG";
+//    static const String nameFiltLFO = "LFOAMT";
     
 
     // CONSTANTS
@@ -26,6 +30,8 @@ namespace Parameters
 	static const float defaultRel = 1.000f;
     static const float defaultSaw = 0.000f;
     static const float defaultNoiseRel = 0.025f;
+    static const float defaultFiltHz = 1000.0f;
+    static const float defaultFiltQ = 0.0f;
     
     static const int defaultSubReg = 0;
     static const int defaultSubWf = 0;
@@ -48,6 +54,8 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel,  8 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubReg,  9 }, "Sub Register", StringArray{"0","-1","-2"}, defaultSubReg));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf,  10 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz,  11 }, "Cutoff",   NormalisableRange<float>(0.0f, 18000.0f, 1.0f, 0.3f), defaultFiltHz));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  12 }, "Quality", NormalisableRange<float>(0.05f, 1.8f, 0.01f, 0.025f), defaultFiltQ));
         //parameters.push_back(std::make_unique<AudioParameterChoice>(nameWaveform, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Saw Down","Square"}, defaultWaveform));
 
 		return { params.begin(), params.end() };

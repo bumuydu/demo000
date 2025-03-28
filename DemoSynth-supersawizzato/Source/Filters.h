@@ -1,53 +1,39 @@
 #pragma once
 #include <JuceHeader.h>
 
-#define MAX_NUM_CH 2    // Da confermare! modify!
+#define MAX_NUM_CH 2
 
-class ReleaseFilter
+class LadderFilter : public dsp::LadderFilter<float>
 {
 public:
-    ReleaseFilter(double defaultRelease = 0.25)
-        : release(defaultRelease)
-    {}
+    LadderFilter(){}
+    ~LadderFilter(){}
     
-    ~ReleaseFilter(){}
-    
-    void prepareToPlay(double sr)
+    void prepare(const dsp::ProcessSpec& spec)
     {
-        sampleRate = sr;
-        updateAlpha();
-    }
-    
-    void processBlock(AudioBuffer<float>& buffer, const int numSamples)
-    {
-        auto bufferData = buffer.getWritePointer(0);
+        dsp::LadderFilter<float>::prepare(spec);
         
-        for (int smp = 0; smp < numSamples; ++smp)
-        {
-            // explicit casting float buffer to double -- old school but compact code
-            envelope = jmax((double)bufferData[smp], envelope * alpha);
-            bufferData[smp] = (float)envelope;
-        }
+        // default values
+        //setEnabled(1);
+        dsp::LadderFilter<float>::setMode(dsp::LadderFilter<float>::Mode::LPF12);
+        dsp::LadderFilter<float>::setCutoffFrequencyHz(1000.0f);
+        dsp::LadderFilter<float>::setResonance(0.0f);
     }
     
-    void setRelease(double newValue)
-    {
-        release = newValue;
-        updateAlpha();
-    }
+//    void setCutoff(const float newValue)
+//    {
+//        setCutoffFrequencyHz(newValue);
+//    }
+//    
+//    void setQuality(const float newValue)
+//    {
+//        setResonance(newValue);
+//    }
+    
+    
     
 private:
-    void updateAlpha()
-    {
-        const auto n = jmax(1.0, release * sampleRate);
-        alpha = exp(-1.0 / n);
-    }
     
-    double release;
-    double sampleRate = 1.0;
-    double alpha = 0.0;
-    double envelope = 0.0;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ReleaseFilter)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LadderFilter)
 };
 

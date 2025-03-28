@@ -167,8 +167,9 @@ public:
 		oscillatorBuffer.clear(0, numSamples);
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
+        mixerBuffer.clear(0, numSamples);
         
-        DBG("Noise Gain: " << noiseGain);
+        //DBG("Noise Gain: " << noiseGain);
 
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
@@ -183,6 +184,10 @@ public:
         dsp::AudioBlock<float> noiseAudioBlock{ noiseData, 1, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> noiseContext{ noiseAudioBlock };
 
+        auto mixerData = mixerBuffer.getArrayOfWritePointers();
+        dsp::AudioBlock<float> mixerBlock{ mixerData, 1, (size_t)numSamples };
+        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+        
 		// Genero la mie forme d'onda
         // SHOULD BECOME A NORMAL FOR LOOP WITH N (# OF VOICES) -- N will also become a param
 		for (auto& oscillator : oscillators)
@@ -196,24 +201,29 @@ public:
         //egNoise.processBlock(noiseEnvelope, numSamples);
 
 		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
-
         
 		// La modulo in ampiezza con l'ADSR
 		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
         ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
         noiseAdsr.applyEnvelopeToBuffer(noiseBuffer, 0, numSamples);
-        //noiseAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
 		oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain);
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
         noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
-
-		// Copio il segnale generato nel buffer di output considerando la porzione di competenza
-		outputBuffer.addFrom(0, startSample, oscillatorBuffer, 0, 0, numSamples);
-        outputBuffer.addFrom(0, startSample, subBuffer, 0, 0, numSamples);
-        outputBuffer.addFrom(0, startSample, noiseBuffer, 0, 0, numSamples);
-
+        mixerBuffer.applyGain(0, numSamples, 1);
+        
+        // mix all buffers into one
+        mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
+        mixerBuffer.addFrom(0, 0, subBuffer, 0, 0, numSamples);
+        mixerBuffer.addFrom(0, 0, noiseBuffer, 0, 0, numSamples);
+        
+        // process the mixed buffer through a ladder filter
+        ladderFilter.process(mixerContext);
+        
+		// copy the filtered buffer to the output buffer
+        outputBuffer.addFrom(0, startSample, mixerBuffer, 0, 0, numSamples);
+        
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
         if (!ampAdsr.isActive() && !noiseAdsr.isActive())
@@ -253,6 +263,7 @@ public:
 		}
         subOscillator.prepare(spec);
         noiseOscillator.prepare(spec);
+        ladderFilter.prepare(spec);
 
 		// Se non ho intenzione di generare un segnale intrinsecamente
 		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
@@ -261,6 +272,7 @@ public:
 		oscillatorBuffer.setSize(1, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
+        mixerBuffer.setSize(1, samplesPerBlock);
 	}
 	
     // Parameter setters
@@ -339,6 +351,16 @@ public:
         subOscillator.prepare(spec);
     }
     
+    void setCutoff(const float newValue)
+    {
+        ladderFilter.setCutoffFrequencyHz(newValue);
+    }
+    
+    void setQuality(const float newValue)
+    {
+        ladderFilter.setResonance(newValue);
+    }
+    
 private:
 	// La classe dsp::Oscillator può essere inizializzata con una lambda da usare come forma d'onda
 	// (x va da -pi a + pi) e con un intero facoltativo che (se presente e diverso da 0) indica alla
@@ -401,10 +423,14 @@ private:
     int subRegister;
     int subWaveform;
     
+    // filter
+    LadderFilter ladderFilter;
 	
+    // buffers
 	AudioBuffer<float> oscillatorBuffer;
     AudioBuffer<float> subBuffer;
     AudioBuffer<float> noiseBuffer;
+    AudioBuffer<float> mixerBuffer;
 	float velocityLevel = 0.7f;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleSynthVoice)
