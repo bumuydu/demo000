@@ -133,6 +133,12 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             
             if (paramID == Parameters::nameFiltQ)
                 voice->setQuality(newValue);
+            
+            if (paramID == Parameters::nameNFilt)
+            {
+                voice->setNoiseFilterCutoff(newValue);
+            }
+                
         }
 
 }

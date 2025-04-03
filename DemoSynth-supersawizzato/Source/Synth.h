@@ -58,10 +58,12 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSubReg = 0, int defaultSubWf = 0)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), subWaveform(defaultSubWf)
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
-
+        noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+        noiseFilter.setCutoffFrequency(20000.0f);
+        noiseFilter.setResonance(0.1f);
 	};
 	
 	~SimpleSynthVoice() {};
@@ -92,6 +94,8 @@ public:
 		}
         noiseOscillator.reset();
         subOscillator.reset();
+        
+        noiseFilter.reset();
         
 		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
 		// set the detuned oscillators' frequencies
@@ -213,6 +217,9 @@ public:
         noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
         mixerBuffer.applyGain(0, numSamples, 1);
         
+        // filtering the noise with its parameter before the main LPF
+        noiseFilter.process(noiseContext);
+        
         // mix all buffers into one
         mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
         mixerBuffer.addFrom(0, 0, subBuffer, 0, 0, numSamples);
@@ -264,6 +271,8 @@ public:
         subOscillator.prepare(spec);
         noiseOscillator.prepare(spec);
         ladderFilter.prepare(spec);
+        noiseFilter.prepare(spec);
+        noiseFilter.reset();
 
 		// Se non ho intenzione di generare un segnale intrinsecamente
 		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
@@ -361,6 +370,26 @@ public:
         ladderFilter.setResonance(newValue);
     }
     
+    void setNoiseFilterCutoff(const float newValue)
+    {
+        if (newValue < 0.45f)
+        {           // low-pass
+            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+            float noiseCutoff = juce::jmap(newValue, 0.0f, 0.45f, 80.0f, 18000.0f);
+            noiseFilter.setCutoffFrequency(noiseCutoff);
+        }else if(newValue < 0.55f)
+        {           // all-pass
+            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+            noiseFilter.setCutoffFrequency(20000.0f);
+        }else
+        {           // high-pass
+            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+            float cutoff = juce::jmap(newValue, 0.55f, 1.0f, 0.0f, 800.0f);
+            noiseFilter.setCutoffFrequency(cutoff);
+        }
+        noiseFilter.reset();
+    }
+    
 private:
 	// La classe dsp::Oscillator può essere inizializzata con una lambda da usare come forma d'onda
 	// (x va da -pi a + pi) e con un intero facoltativo che (se presente e diverso da 0) indica alla
@@ -421,11 +450,15 @@ private:
     
     // sub params
     int subRegister;
-    int subWaveform;
     
-    // filter
-    LadderFilter ladderFilter;
-	
+    // modify: are these necessary?
+    //int subWaveform;
+    //float noiseFiltParam;
+    
+    // filters
+    LadderFilter ladderFilter;                              // LPF for the whole synth
+    juce::dsp::StateVariableTPTFilter<float> noiseFilter;   // LP/AP/HP filter for the noise oscillator
+    
     // buffers
 	AudioBuffer<float> oscillatorBuffer;
     AudioBuffer<float> subBuffer;
