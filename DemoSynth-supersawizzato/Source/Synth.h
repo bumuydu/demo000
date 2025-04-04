@@ -58,8 +58,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, float defaultDetune = 0.0f, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), sawNum(defaultSawNum), sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
         noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
         noiseFilter.setCutoffFrequency(20000.0f);
@@ -97,7 +97,7 @@ public:
         
         noiseFilter.reset();
         
-		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
 		// set the detuned oscillators' frequencies
 		float detunedFreq1 = baseFreq * cent;
 		float detunedFreq2 = baseFreq / cent;
@@ -285,6 +285,31 @@ public:
 	}
 	
     // Parameter setters
+    void setSawRegister(const int newValue)
+    {
+        sawRegister = newValue;
+    }
+    
+    void setSawNum(const int newValue)
+    {
+        sawNum = newValue;
+    }
+    
+    void setSawDetune(const float newValue)
+    {
+        sawDetune = newValue;
+    }
+    
+    void setSawStereoWidth(const float newValue)
+    {
+        sawStereoWidth = newValue;
+    }
+    
+    void setSawPhase(const float newValue)
+    {
+        sawPhase = newValue;
+    }
+    
     void setSawGain(const float newValue)
     {
         sawGain = newValue; // modify: make it smooth
@@ -370,6 +395,16 @@ public:
         ladderFilter.setResonance(newValue);
     }
     
+//    void setFilterEnvAmt(const float newValue)
+//    {
+//        ladderFilter.setEnvAmt(newValue);
+//    }
+//    
+//    void nameFiltLfo(const float newValue)
+//    {
+//        ladderFilter.setLfoAmt(newValue);
+//    }
+    
     void setNoiseFilterCutoff(const float newValue)
     {
         if (newValue < 0.45f)
@@ -424,12 +459,7 @@ private:
 	// raise to the number of cents (15 sounds nice)
 	double cent = pow(root, 15);
 
-	// La classe di JUCE ADSR mette a disposizione un generatore di inviluppo a 4 
-	// sezioni (Attack, Decay, Sustain, Release) e una struttura dati che permette
-	// di cambiare i 4 parametri.
-	// Onestamente non mi piace molto l'ADSR di JUCE per la modulazione
-	// dell'inviluppo d'ampiezza, perchè le fasi di A, D e R sono di tipo lineare,
-	// mentre suonerebbe più naturale averle di tipo esponenziale...
+	// Linear ADSR --> modify: will add a param (slope) which will make the lines nice and exponential curves
 	ADSR ampAdsr;
 	ADSR::Parameters ampAdsrParams;
     // ADSR con solo il parametro Release per il noise osc
@@ -442,6 +472,13 @@ private:
     
     // envelope generator for the noise osc
     //ReleaseFilter egNoise;
+    
+    // osc params
+    int sawRegister;
+    int sawNum;
+    float sawDetune;
+    float sawStereoWidth;
+    float sawPhase;
     
     // osc level params --> MODIFY: might make a mixer class
     float sawGain;

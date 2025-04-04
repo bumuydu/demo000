@@ -96,6 +96,22 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
     for (int v = 0; v < mySynth.getNumVoices(); ++v)
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
         {
+            // OSC
+            if (paramID == Parameters::nameSawReg)
+                voice->setSawRegister(newValue);
+            
+            if (paramID == Parameters::nameSawNum)
+                voice->setSawNum(newValue);
+            
+            if (paramID == Parameters::nameDetune)
+                voice->setSawDetune(newValue);
+            
+            if (paramID == Parameters::nameStereoWidth)
+                voice->setSawStereoWidth(newValue);
+            
+            if (paramID == Parameters::namePhase)
+                voice->setSawPhase(newValue);
+            
             // OSC levels
             if (paramID == Parameters::nameSawLev)
                 voice->setSawGain(Decibels::decibelsToGain(newValue, Parameters::dbFloor));
@@ -105,9 +121,6 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             
             if (paramID == Parameters::nameNLev)
                 voice->setNoiseGain(Decibels::decibelsToGain(newValue, Parameters::dbFloor));
-            
-            if (paramID == Parameters::nameNRel)
-                voice->setNoiseRelease(newValue);
             
             // ADSR
             if (paramID == Parameters::nameAtk)
@@ -134,10 +147,18 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             if (paramID == Parameters::nameFiltQ)
                 voice->setQuality(newValue);
             
+            if (paramID == Parameters::nameNRel)
+                voice->setNoiseRelease(newValue);
+            
             if (paramID == Parameters::nameNFilt)
-            {
                 voice->setNoiseFilterCutoff(newValue);
-            }
+                        
+//            if (paramID == Parameters::nameFiltEnv)
+//                voice->setFilterEnvAmt(newValue);
+//            
+//            if (paramID == Parameters::nameFiltLfo)
+//                voice->setFilterLfoAmt(newValue);
+
                 
         }
 
