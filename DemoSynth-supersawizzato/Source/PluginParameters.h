@@ -38,7 +38,7 @@ namespace Parameters
 	static const float defaultSus = 0.6f;
 	static const float defaultRel = 1.000f;
     static const float defaultSaw = 0.000f;
-    static const float defaultDetune = 0.2f;
+    static const float defaultDetune = 0.15f;
     static const float defaultStereoWidth = 0.000f;
     static const float defaultPhase = 0.5f;
     static const float defaultFiltHz = 1000.0f;
@@ -63,7 +63,7 @@ namespace Parameters
 
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawReg,  1 }, "Saw Register", -2, 2, defaultSawReg));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawNum,  2 }, "# of Saws", 1, 16, defaultSawNum));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDetune,  3 }, "Detune", NormalisableRange<float>(0.0f, 1.0f), defaultDetune));
+        params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameDetune,  3 }, "Detune", 0, 100, defaultDetune));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameStereoWidth,  4 }, "Stereo Width", NormalisableRange<float>(0.0f, 1.0f), defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { namePhase,  5 }, "Phase (degrees)", NormalisableRange<float>(0.0f, 1.0f), defaultPhase));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSawLev,  6 }, "Saw Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), defaultSaw));

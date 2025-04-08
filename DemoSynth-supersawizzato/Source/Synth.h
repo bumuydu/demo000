@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include "Filters.h"
 
+#define MAX_SAW_OSCS 3
+
 // Sembrano classi lunghe, ma se eliminate i commenti diventa tutto molto snello
 // ===================================================================================
 
@@ -58,9 +60,10 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, float defaultDetune = 0.0f, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), sawNum(defaultSawNum), sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 3, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), sawNum(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
+        initializeOscillators();
         noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
         noiseFilter.setCutoffFrequency(20000.0f);
         noiseFilter.setResonance(0.1f);
@@ -88,28 +91,28 @@ public:
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{	
 		// Reset phase for each oscillator
-		for (auto& oscillator : oscillators)
-		{
-			oscillator.reset();
-		}
+//		for (auto& oscillator : oscillators)
+//		{
+//			oscillator.reset();
+//		}
+//        
+        for (int i = 0; i < MAX_SAW_OSCS; ++i)
+        {
+            oscillators[i].reset();
+        }
         noiseOscillator.reset();
         subOscillator.reset();
-        
+
         noiseFilter.reset();
         
-		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
-		// set the detuned oscillators' frequencies
-		float detunedFreq1 = baseFreq * cent;
-		float detunedFreq2 = baseFreq / cent;
+        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        setSawFreqs(baseFreq);
+//		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
+//		float detunedFreq1 = baseFreq * cent;
+//		float detunedFreq2 = baseFreq / cent;
         
         // sub frequency calculation... +1 because the default value = 0 is supposed to be 1 oct below main osc
         float subFreq = baseFreq / std::pow(2, subRegister + 1);
-        
-        // Cambio frequenza all'oscillatore (il secondo argomento a true indica di NON usare smoothed value)
-		// set the frequencies
-		oscillators[0].setFrequency(baseFreq, true);
-		oscillators[1].setFrequency(detunedFreq1, true);
-		oscillators[2].setFrequency(detunedFreq2, true);
         
         subOscillator.setFrequency(subFreq);
 
@@ -283,6 +286,53 @@ public:
         noiseBuffer.setSize(1, samplesPerBlock);
         mixerBuffer.setSize(1, samplesPerBlock);
 	}
+    
+    void initializeOscillators()
+    {
+        for (int i = 0; i < MAX_SAW_OSCS; ++i)
+        {
+            oscillators[i].initialise([](float x) { return x / MathConstants<float>::pi; });
+            oscillators[i].setFrequency(0, true);
+        }
+    }
+    
+    void setSawFreqs(double baseFreq)
+    {
+        float base = baseFreq * std::pow(2, sawRegister);
+        
+        // depending on the number of saws and detune value
+        // the frequencies of the rest of the oscillators have to be calculated
+        // 1. if numSaw odd --> then base is unchanged and the rest will be as before
+        //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
+        // 2.
+        
+        if (activeOscs % 2 != 0)
+        {   // odd
+            oscillators[0].setFrequency(base, true);
+            
+            if (activeOscs > 1)
+            {
+                for (int i = 1; i < activeOscs; i+=2)
+                {
+                    // 1,2,3... for each pair
+                    int pairIndex = (i + 1) / 2;
+                    double detuneAmount = pow(cent, pairIndex);
+                    
+                    oscillators[i].setFrequency(base * detuneAmount, true);
+                    oscillators[i+1].setFrequency(base / detuneAmount, true);
+                }
+            }
+        }
+        else
+        {   // even
+            for (int i = 0; i < activeOscs; i+=2) {
+                int pairIndex = (i + 1) / 2;
+                double detuneAmount = pow(cent, pairIndex);
+                oscillators[i].setFrequency(base * detuneAmount, true);
+                oscillators[i+1].setFrequency(base / detuneAmount, true);
+            }
+        }
+    }
 	
     // Parameter setters
     void setSawRegister(const int newValue)
@@ -297,7 +347,8 @@ public:
     
     void setSawDetune(const float newValue)
     {
-        sawDetune = newValue;
+        //sawDetune = newValue;
+        cent = pow(root, newValue);
     }
     
     void setSawStereoWidth(const float newValue)
@@ -437,14 +488,15 @@ private:
     // sine wave
 	//dsp::Oscillator<float> sinOscillator{ [](float x) {return std::sin(x); } };
 
-	dsp::Oscillator<float> oscillators[3] =
-	{
-		{ [](float x) {return x / MathConstants<float>::pi; }},	// main saw osc
-		{ [](float x) {return x / MathConstants<float>::pi; }}, // 1st detuned
-		{ [](float x) {return x / MathConstants<float>::pi; }}
-        // to obtain the JP8000 supersaw 4 more detuned oscillators should be added
-//        , { [](float x) {return std::sin(x); }}// sub sine
-	};
+    int activeOscs = 3;
+    dsp::Oscillator<float> oscillators[MAX_SAW_OSCS];
+//	dsp::Oscillator<float> oscillators[3] =
+//	{
+//		{ [](float x) {return x / MathConstants<float>::pi; }},	// main saw osc
+//		{ [](float x) {return x / MathConstants<float>::pi; }}, // 1st detuned
+//		{ [](float x) {return x / MathConstants<float>::pi; }}
+//        // to obtain the JP8000 supersaw 4 more detuned oscillators should be added
+//	};
     
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
@@ -476,7 +528,7 @@ private:
     // osc params
     int sawRegister;
     int sawNum;
-    float sawDetune;
+    int sawDetune;
     float sawStereoWidth;
     float sawPhase;
     
