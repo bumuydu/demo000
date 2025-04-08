@@ -38,9 +38,7 @@ namespace Parameters
 	static const float defaultSus = 0.6f;
 	static const float defaultRel = 1.000f;
     static const float defaultSaw = 0.000f;
-    static const float defaultDetune = 0.15f;
     static const float defaultStereoWidth = 0.000f;
-    static const float defaultPhase = 0.5f;
     static const float defaultFiltHz = 1000.0f;
     static const float defaultFiltQ = 0.000f;
     static const float defaultFiltEnv = 0.000f;
@@ -50,6 +48,8 @@ namespace Parameters
     
     static const int defaultSawReg = 0; // in this case, it sets the default register to 0
     static const int defaultSawNum = 5;
+    static const int defaultDetune = 15;
+    static const int defaultPhase = 180;
     static const int defaultSubReg = 0;
     static const int defaultSubWf = 0;
     
@@ -65,7 +65,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawNum,  2 }, "# of Saws", 1, 16, defaultSawNum));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameDetune,  3 }, "Detune", 0, 100, defaultDetune));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameStereoWidth,  4 }, "Stereo Width", NormalisableRange<float>(0.0f, 1.0f), defaultStereoWidth));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { namePhase,  5 }, "Phase (degrees)", NormalisableRange<float>(0.0f, 1.0f), defaultPhase));
+        params.push_back(std::make_unique<AudioParameterInt>(ParameterID { namePhase, 5 }, "Phase (degrees)", 0, 360, defaultPhase));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSawLev,  6 }, "Saw Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), defaultSaw));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSubLev,  7 }, "Sub Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNLev,  8 }, "Noise Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
@@ -77,8 +77,8 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf,  14 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz,  15 }, "Cutoff",   NormalisableRange<float>(0.0f, 18000.0f, 1.0f, 0.3f), defaultFiltHz));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  16 }, "Quality", NormalisableRange<float>(0.05f, 1.15f, 0.01f, 0.5f), defaultFiltQ));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt,  17 }, "EG AMT--not yet implemented!", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt,  18 }, "LFO AMT--not yet implemented!", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfo));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv,  17 }, "EG AMT--not yet implemented!", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfo,  18 }, "LFO AMT--not yet implemented!", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfo));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  19 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultNoiseRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt,  20 }, "Noise Color/Filter (LP,APF,HP)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
         //parameters.push_back(std::make_unique<AudioParameterChoice>(nameWaveform, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Saw Down","Square"}, defaultWaveform));

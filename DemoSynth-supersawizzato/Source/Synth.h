@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include "Filters.h"
 
-#define MAX_SAW_OSCS 3
+#define MAX_SAW_OSCS 16
 
 // Sembrano classi lunghe, ma se eliminate i commenti diventa tutto molto snello
 // ===================================================================================
@@ -60,8 +60,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 3, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), sawNum(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
         initializeOscillators();
         noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
@@ -196,11 +196,10 @@ public:
         dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
 		// Genero la mie forme d'onda
-        // SHOULD BECOME A NORMAL FOR LOOP WITH N (# OF VOICES) -- N will also become a param
-		for (auto& oscillator : oscillators)
-		{
-			oscillator.process(context);
-		}
+        for (int i = 0; i < activeOscs; ++i)
+        {
+            oscillators[i].process(context);
+        }
         subOscillator.process(subContext);
         noiseOscillator.process(noiseContext);
         
@@ -215,7 +214,7 @@ public:
         noiseAdsr.applyEnvelopeToBuffer(noiseBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
-		oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain);
+        oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(activeOscs));
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
         noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
         mixerBuffer.applyGain(0, numSamples, 1);
@@ -342,7 +341,11 @@ public:
     
     void setSawNum(const int newValue)
     {
-        sawNum = newValue;
+        activeOscs = newValue;
+//        // MODIFY/ASK: setting freqs of inactive oscs to 0 rather than deactivating them completely
+//        for (int i = 1; i <= MAX_SAW_OSCS - activeOscs; ++i) {
+//            oscillators[activeOscs + i].setFrequency(0, true);
+//        }
     }
     
     void setSawDetune(const float newValue)
@@ -488,15 +491,10 @@ private:
     // sine wave
 	//dsp::Oscillator<float> sinOscillator{ [](float x) {return std::sin(x); } };
 
-    int activeOscs = 3;
+    int activeOscs;
     dsp::Oscillator<float> oscillators[MAX_SAW_OSCS];
-//	dsp::Oscillator<float> oscillators[3] =
-//	{
-//		{ [](float x) {return x / MathConstants<float>::pi; }},	// main saw osc
-//		{ [](float x) {return x / MathConstants<float>::pi; }}, // 1st detuned
-//		{ [](float x) {return x / MathConstants<float>::pi; }}
-//        // to obtain the JP8000 supersaw 4 more detuned oscillators should be added
-//	};
+        // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
+
     
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
@@ -527,10 +525,11 @@ private:
     
     // osc params
     int sawRegister;
-    int sawNum;
+    //int sawNum; // I have activeOscs which is in place of this
     int sawDetune;
+    int sawPhase;
     float sawStereoWidth;
-    float sawPhase;
+    
     
     // osc level params --> MODIFY: might make a mixer class
     float sawGain;
