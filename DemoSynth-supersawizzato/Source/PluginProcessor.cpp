@@ -40,9 +40,9 @@ void DemoSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 
 void DemoSynthAudioProcessor::releaseResources()
 {
-//    for (int v = 0; v < mySynth.getNumVoices(); ++v)
-//        if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
-//            voice->releaseResources();
+    for (int v = 0; v < mySynth.getNumVoices(); ++v)
+        if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
+            voice->releaseResources();
 }
 
 // Supporta mono o stereo out (input non presente, come definito nel costruttore)

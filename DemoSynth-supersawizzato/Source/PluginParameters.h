@@ -43,7 +43,7 @@ namespace Parameters
     static const float defaultFiltQ = 0.000f;
     static const float defaultFiltEnv = 0.000f;
     static const float defaultFiltLfo = 0.000f;
-    static const float defaultNoiseRel = 0.025f;
+    static const float defaultNoiseRel = 0.150f;
     static const float defaultNFilt = 0.5f;
     
     static const int defaultSawReg = 0; // in this case, it sets the default register to 0
@@ -79,7 +79,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  16 }, "Quality", NormalisableRange<float>(0.05f, 1.15f, 0.01f, 0.5f), defaultFiltQ));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv,  17 }, "EG AMT--not yet implemented!", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfo,  18 }, "LFO AMT--not yet implemented!", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfo));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  19 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultNoiseRel));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  19 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt,  20 }, "Noise Color/Filter (LP,APF,HP)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
         //parameters.push_back(std::make_unique<AudioParameterChoice>(nameWaveform, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Saw Down","Square"}, defaultWaveform));
 

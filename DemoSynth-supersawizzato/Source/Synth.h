@@ -60,8 +60,9 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0/*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), noiseAdsrParams(0.005f, 0.025f, 0.6f, defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f,
+                     float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0, float defaultNoiseRel = 0.25f /*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg), egNoise(defaultNoiseRel)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
         initializeOscillators();
         noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
@@ -84,7 +85,7 @@ public:
     
     void releaseResources()
     {
-        //noiseEnvelope.setSize(0, 0);
+        noiseEnvelope.setSize(0, 0);
     }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
@@ -105,23 +106,26 @@ public:
 
         noiseFilter.reset();
         
+        // storing currentMidiNote for parameter changes related to the frequency
+        currentMidiNote = midiNoteNumber;
         float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         setSawFreqs(baseFreq);
 //		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
 //		float detunedFreq1 = baseFreq * cent;
 //		float detunedFreq2 = baseFreq / cent;
         
-        // sub frequency calculation... +1 because the default value = 0 is supposed to be 1 oct below main osc
+        // sub frequency calculation
+            // +1 because the default value is 0, but sub is supposed to be 1 oct below main osc
         float subFreq = baseFreq / std::pow(2, subRegister + 1);
         
         subOscillator.setFrequency(subFreq);
 
 		// Triggero l'ADSR
 		ampAdsr.noteOn();
-        noiseAdsr.noteOn();
-
+        
 		// Mi salvo la velocity da usare come volume della nota suonata
 		velocityLevel = velocity;
+        trigger = true;
 	}
 	
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-off assegnato a questa voce
@@ -129,11 +133,10 @@ public:
 	{
 		// Triggero la fase di release dell'ADSR
 		ampAdsr.noteOff();
-        noiseAdsr.noteOff();
 
 		// Se mi chiede di non generare code (o altri casi, tipo se l'ADSR ha già finito la fase di release)
 		// allora segnalo alla classe Synthesiser che questa voce è libera per poter riprodurre altri suoni
-        if (!allowTailOff || ( !ampAdsr.isActive() && !noiseAdsr.isActive()))
+        if (!allowTailOff || ( !ampAdsr.isActive()))
 			clearCurrentNote();
 	}
 	
@@ -175,11 +178,14 @@ public:
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
         mixerBuffer.clear(0, numSamples);
+        noiseEnvelope.clear(0, numSamples);
         
         //DBG("Noise Gain: " << noiseGain);
 
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
+        
+        // modify: must change the number of channels here to 2 to make it stereo
 		dsp::AudioBlock<float> audioBlock{ voiceData, 1, (size_t)numSamples };
 		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
@@ -188,8 +194,8 @@ public:
         dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
         
         auto noiseData = noiseBuffer.getArrayOfWritePointers();
-        dsp::AudioBlock<float> noiseAudioBlock{ noiseData, 1, (size_t)numSamples };
-        dsp::ProcessContextReplacing<float> noiseContext{ noiseAudioBlock };
+//        dsp::AudioBlock<float> noiseAudioBlock{ noiseData, 1, (size_t)numSamples };
+//        dsp::ProcessContextReplacing<float> noiseContext{ noiseAudioBlock };
 
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 1, (size_t)numSamples };
@@ -201,26 +207,42 @@ public:
             oscillators[i].process(context);
         }
         subOscillator.process(subContext);
-        noiseOscillator.process(noiseContext);
+//        noiseOscillator.process(noiseContext);
         
-        //noiseEnvelope.setSample(0, timeStamp, velocity);
-        //egNoise.processBlock(noiseEnvelope, numSamples);
+        // noise oscillator with the ReleaseFilter
+        if(trigger)
+        {
+            noiseEnvelope.setSample(0, startSample, velocityLevel);
+            trigger = false;
+        }
+        
+        egNoise.processBlock(noiseEnvelope, startSample, numSamples);
+        const auto numChannels = noiseBuffer.getNumChannels();
+        for (int ch = 0; ch < numChannels; ++ch)
+            for (int smp = 0; smp < numSamples; ++smp)
+                noiseData[ch][smp] += noiseGain * (noise.nextFloat() * 2.0f) - 1.0f;
 
+        noiseFilter2.processBlock(noiseBuffer, numSamples);
+        
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            FloatVectorOperations::multiply(noiseData[ch], noiseEnvelope.getReadPointer(0), numSamples);
+        }
+        
 		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
         
 		// La modulo in ampiezza con l'ADSR
 		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
         ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
-        noiseAdsr.applyEnvelopeToBuffer(noiseBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
         oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(activeOscs));
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
-        noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
+//        noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
         mixerBuffer.applyGain(0, numSamples, 1);
         
         // filtering the noise with its parameter before the main LPF
-        noiseFilter.process(noiseContext);
+//        noiseFilter.process(noiseContext);
         
         // mix all buffers into one
         mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
@@ -235,29 +257,28 @@ public:
         
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
-        if (!ampAdsr.isActive() && !noiseAdsr.isActive())
-			clearCurrentNote();
+        if (!ampAdsr.isActive() && noiseEnvFinished())
+        {
+            clearCurrentNote();
+            trigger = false;
+        }
+		
 	}
 
 	// ==== Metodi personali ====
 
-	// Prepare to play della singola voce di polifonia. Non è prevista dalla classe astratta
-	// (c'è un metodo setSampleFrequency o qualcosa del genere che svolge una funzione simile)
-	// ma è comodo averla per poter usare il sint come un normale Processor
+	// Prepare to play of a single voice
 	void prepareToPlay(double sampleRate, int samplesPerBlock)
 	{
 		// Resetto gli ADSR
 		ampAdsr.setSampleRate(sampleRate);
 		ampAdsr.setParameters(ampAdsrParams);
         
-        noiseAdsr.setSampleRate(sampleRate);
-        noiseAdsr.setParameters(noiseAdsrParams);
-        
-        
         // We prepare the release envelope generator of the noise osc
-//        egNoise.prepareToPlay(sampleRate);
-//        noiseEnvelope.setSize(1, samplesPerBlock);    // mono
-//        noiseEnvelope.clear();
+        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify? 
+        noiseEnvelope.clear();
+        egNoise.prepareToPlay(sampleRate);
+        noiseFilter2.prepareToPlay(sampleRate);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
 		
@@ -332,6 +353,17 @@ public:
             }
         }
     }
+    
+    void updateFreqs()
+    {
+        if (isVoiceActive()) {
+            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote);
+            setSawFreqs(baseFreq);
+            
+            float subFreq = baseFreq / std::pow(2, subRegister + 1);
+            subOscillator.setFrequency(subFreq);
+        }
+    }
 	
     // Parameter setters
     void setSawRegister(const int newValue)
@@ -342,16 +374,13 @@ public:
     void setSawNum(const int newValue)
     {
         activeOscs = newValue;
-//        // MODIFY/ASK: setting freqs of inactive oscs to 0 rather than deactivating them completely
-//        for (int i = 1; i <= MAX_SAW_OSCS - activeOscs; ++i) {
-//            oscillators[activeOscs + i].setFrequency(0, true);
-//        }
     }
     
     void setSawDetune(const float newValue)
     {
         //sawDetune = newValue;
         cent = pow(root, newValue);
+        // updateFreqs(); // modify: non funziona cosi
     }
     
     void setSawStereoWidth(const float newValue)
@@ -381,9 +410,7 @@ public:
     
     void setNoiseRelease(const float newValue)
     {
-        //egNoise.setRelease(newValue);
-        noiseAdsrParams.release = newValue;
-        noiseAdsr.setParameters(noiseAdsrParams);
+        egNoise.setRelease(newValue);
     }
     
 	// Setters of JUCE's ADSR parameters -- MODIFY: Add slope param. A,D,R ^slope , S^(1/slope)
@@ -479,6 +506,11 @@ public:
         noiseFilter.reset();
     }
     
+    bool noiseEnvFinished() const
+    {
+        return !egNoise.isActive();
+    }
+    
 private:
 	// La classe dsp::Oscillator può essere inizializzata con una lambda da usare come forma d'onda
 	// (x va da -pi a + pi) e con un intero facoltativo che (se presente e diverso da 0) indica alla
@@ -508,20 +540,20 @@ private:
 	// amt of detune is fixed (for now) for the 2nd & 3rd oscillators
 	// raise to the number of cents (15 sounds nice)
 	double cent = pow(root, 15);
+    // to track detune, register parameters on active note
+    int currentMidiNote = 60;
 
 	// Linear ADSR --> modify: will add a param (slope) which will make the lines nice and exponential curves
 	ADSR ampAdsr;
 	ADSR::Parameters ampAdsrParams;
-    // ADSR con solo il parametro Release per il noise osc
-    ADSR noiseAdsr;
-    ADSR::Parameters noiseAdsrParams;
     
+    bool trigger = false;
     // We use the JUCE class Random to generate noise
     Random noise;
-    //AudioBuffer<float> noiseEnvelope;
-    
+    AudioBuffer<float> noiseEnvelope;
     // envelope generator for the noise osc
-    //ReleaseFilter egNoise;
+    ReleaseFilter egNoise;
+    StereoFilter noiseFilter2;
     
     // osc params
     int sawRegister;
