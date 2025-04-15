@@ -1,38 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
+#include "Oscillators.h"
 #include "Filters.h"
-
-#define MAX_SAW_OSCS 16
-
-// Sembrano classi lunghe, ma se eliminate i commenti diventa tutto molto snello
-// ===================================================================================
-
-// La classe Synthesiser da istanziare nel PluginProcessor si appoggia ad altre due
-// classi astratte che dovrete implementare voi: SynthesiserSound e SynthesiserVoice.
-
-// La prima serve semplicemente a mappare i canali midi e le zone della tastiera, mentre 
-// la seconda implementa il vostro bellissimo algoritmo di sintesi.
-// La gestione della polifonia è adibita alla classe Synthesiser, quello che implementate 
-// in SynthesiserVoice è la SINGOLA VOCE DI POLIFONIA.
-// Per l'implementazione di sint monofonici con meccanismi di note-priority occorre
-// ereditare da Synthesiser e fare l'override di handleMidiEvent per implementare un meccanismo
-// personalizzato di voice stealing (oppure non usate la classe Synthesiser).
-//
-// https://docs.juce.com/master/classSynthesiser.html
-
-// ===================================================================================
-
-// Un SynthesiserSound descrive un possibile suono riproducibile da un sintetizzatore.
-// In questo esempio il sintetizzatore suona in modo polifonico un solo suono, ma
-// se voleste spezzare la tastiera in due per fare in modo che la prima metà abbia
-// un timbro e la seconda un altro (o se voleste che ogni canale MIDI fosse associato
-// ad un suono diverso) dovreste implementare questa classe in modo diverso.
-// Si pensi a questa classe come a uno strumento necessario per mappare un suono sulla tastiera
-// o su uno o più canali MIDI. La classe che invece effettivamente suona è la SynthesiserVoice.
-// In questo esempio un synth sound è associato a tutta la tastiera e a tutti i canali MIDI
-//
-// https://docs.juce.com/master/classSynthesiserSound.html
-//
 
 class MySynthSound : public SynthesiserSound
 {
@@ -47,24 +16,13 @@ private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MySynthSound)
 };
 
-// ===================================================================================
-
-// Una classe SynthesiserVoice rappresenta la singola voce di polifonia usata per generare un suono.
-// Questa è la classe da implementare per creare il vostro sintetizzatore.
-// In particolare la classe Synthesiser si occupa di gestire diverse istanze di SynthesiserVoice,
-// ognuna adibita alla riproduzione di una voce di polifonia.
-//
-// https://docs.juce.com/master/classSynthesiserVoice.html
-//
 
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f,
-                     float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f, int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, int defaultSubReg = 0, float defaultNoiseRel = 0.25f /*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth), subRegister(defaultSubReg), egNoise(defaultNoiseRel)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
+    : sawOscs(defaultSawReg, defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), egNoise(defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
 	{
-        initializeOscillators();
         noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
         noiseFilter.setCutoffFrequency(20000.0f);
         noiseFilter.setResonance(0.1f);
@@ -86,38 +44,25 @@ public:
     void releaseResources()
     {
         noiseEnvelope.setSize(0, 0);
+//        oscillators.releaseResources();
     }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{	
 		// Reset phase for each oscillator
-//		for (auto& oscillator : oscillators)
-//		{
-//			oscillator.reset();
-//		}
-//        
-        for (int i = 0; i < MAX_SAW_OSCS; ++i)
-        {
-            oscillators[i].reset();
-        }
-        noiseOscillator.reset();
         subOscillator.reset();
-
         noiseFilter.reset();
+        sawOscs.startNote(midiNoteNumber, velocity);
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
-        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-        setSawFreqs(baseFreq);
-//		float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
-//		float detunedFreq1 = baseFreq * cent;
-//		float detunedFreq2 = baseFreq / cent;
+        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
+        sawOscs.setSawFreqs(baseFreq);
         
         // sub frequency calculation
             // +1 because the default value is 0, but sub is supposed to be 1 oct below main osc
         float subFreq = baseFreq / std::pow(2, subRegister + 1);
-        
         subOscillator.setFrequency(subFreq);
 
 		// Triggero l'ADSR
@@ -194,20 +139,14 @@ public:
         dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
         
         auto noiseData = noiseBuffer.getArrayOfWritePointers();
-//        dsp::AudioBlock<float> noiseAudioBlock{ noiseData, 1, (size_t)numSamples };
-//        dsp::ProcessContextReplacing<float> noiseContext{ noiseAudioBlock };
 
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 1, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
 		// Genero la mie forme d'onda
-        for (int i = 0; i < activeOscs; ++i)
-        {
-            oscillators[i].process(context);
-        }
+        sawOscs.process(context);
         subOscillator.process(subContext);
-//        noiseOscillator.process(noiseContext);
         
         // noise oscillator with the ReleaseFilter
         if(trigger)
@@ -217,11 +156,16 @@ public:
         }
         
         egNoise.processBlock(noiseEnvelope, startSample, numSamples);
+        // modify: realistically, this will only be calculated once and then added to both channels of the outputBuffer
         const auto numChannels = noiseBuffer.getNumChannels();
         for (int ch = 0; ch < numChannels; ++ch)
             for (int smp = 0; smp < numSamples; ++smp)
-                noiseData[ch][smp] += noiseGain * (noise.nextFloat() * 2.0f) - 1.0f;
-
+                noiseData[ch][smp] += velocityLevel * noiseGain * (noise.nextFloat() * 2.0f) - 1.0f;
+        
+		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
+        
+        // filtering the noise with its parameter before the main LPF
+//        noiseFilter.process(noiseContext); // old method with Oscillator instance
         noiseFilter2.processBlock(noiseBuffer, numSamples);
         
         for (int ch = 0; ch < numChannels; ++ch)
@@ -229,20 +173,14 @@ public:
             FloatVectorOperations::multiply(noiseData[ch], noiseEnvelope.getReadPointer(0), numSamples);
         }
         
-		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
-        
 		// La modulo in ampiezza con l'ADSR
 		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
         ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
-        oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(activeOscs));
+        oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(sawOscs.getActiveOscs()));
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
-//        noiseBuffer.applyGain(0, numSamples, velocityLevel * noiseGain);
         mixerBuffer.applyGain(0, numSamples, 1);
-        
-        // filtering the noise with its parameter before the main LPF
-//        noiseFilter.process(noiseContext);
         
         // mix all buffers into one
         mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
@@ -281,18 +219,13 @@ public:
         noiseFilter2.prepareToPlay(sampleRate);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
-		
 		spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
 
 		// Inizializzo l'oscillatore
-		for (auto& oscillator : oscillators)
-		{
-			oscillator.prepare(spec);
-		}
+        sawOscs.prepareToPlay(sampleRate, samplesPerBlock, spec);
         subOscillator.prepare(spec);
-        noiseOscillator.prepare(spec);
         ladderFilter.prepare(spec);
         noiseFilter.prepare(spec);
         noiseFilter.reset();
@@ -307,90 +240,45 @@ public:
         mixerBuffer.setSize(1, samplesPerBlock);
 	}
     
-    void initializeOscillators()
-    {
-        for (int i = 0; i < MAX_SAW_OSCS; ++i)
-        {
-            oscillators[i].initialise([](float x) { return x / MathConstants<float>::pi; });
-            oscillators[i].setFrequency(0, true);
-        }
-    }
-    
-    void setSawFreqs(double baseFreq)
-    {
-        float base = baseFreq * std::pow(2, sawRegister);
-        
-        // depending on the number of saws and detune value
-        // the frequencies of the rest of the oscillators have to be calculated
-        // 1. if numSaw odd --> then base is unchanged and the rest will be as before
-        //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
-        // 2.
-        
-        if (activeOscs % 2 != 0)
-        {   // odd
-            oscillators[0].setFrequency(base, true);
-            
-            if (activeOscs > 1)
-            {
-                for (int i = 1; i < activeOscs; i+=2)
-                {
-                    // 1,2,3... for each pair
-                    int pairIndex = (i + 1) / 2;
-                    double detuneAmount = pow(cent, pairIndex);
-                    
-                    oscillators[i].setFrequency(base * detuneAmount, true);
-                    oscillators[i+1].setFrequency(base / detuneAmount, true);
-                }
-            }
-        }
-        else
-        {   // even
-            for (int i = 0; i < activeOscs; i+=2) {
-                int pairIndex = (i + 1) / 2;
-                double detuneAmount = pow(cent, pairIndex);
-                oscillators[i].setFrequency(base * detuneAmount, true);
-                oscillators[i+1].setFrequency(base / detuneAmount, true);
-            }
-        }
-    }
-    
     void updateFreqs()
     {
-        if (isVoiceActive()) {
-            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote);
-            setSawFreqs(baseFreq);
+//        if (isVoiceActive()) {
+            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister);
+            sawOscs.setSawFreqs(baseFreq);
             
             float subFreq = baseFreq / std::pow(2, subRegister + 1);
             subOscillator.setFrequency(subFreq);
-        }
+//        }
     }
 	
     // Parameter setters
     void setSawRegister(const int newValue)
     {
-        sawRegister = newValue;
+        // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
+        sawRegister = newValue - 2;
+        sawOscs.setRegister(sawRegister);
+        updateFreqs();
     }
     
     void setSawNum(const int newValue)
     {
-        activeOscs = newValue;
+        sawOscs.setActiveOscs(newValue);
+        //activeOscs = newValue;
     }
     
     void setSawDetune(const float newValue)
     {
-        //sawDetune = newValue;
-        cent = pow(root, newValue);
-        // updateFreqs(); // modify: non funziona cosi
+        sawOscs.setDetune(newValue);
     }
     
     void setSawStereoWidth(const float newValue)
     {
-        sawStereoWidth = newValue;
+        sawOscs.setStereoWidth(newValue);
     }
     
     void setSawPhase(const float newValue)
     {
-        sawPhase = newValue;
+        sawOscs.setPhase(newValue);
     }
     
     void setSawGain(const float newValue)
@@ -441,6 +329,7 @@ public:
     void setSubReg(const int newValue)
     {
         subRegister = newValue;
+        updateFreqs();
     }
 
     void setSubWf(const int newValue)
@@ -464,6 +353,7 @@ public:
                 }
         //dsp::ProcessSpec spec;
         subOscillator.prepare(spec);
+        updateFreqs();
     }
     
     void setCutoff(const float newValue)
@@ -520,26 +410,17 @@ private:
     
     dsp::ProcessSpec spec;
 	
-    // sine wave
-	//dsp::Oscillator<float> sinOscillator{ [](float x) {return std::sin(x); } };
 
-    int activeOscs;
-    dsp::Oscillator<float> oscillators[MAX_SAW_OSCS];
-        // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
-
+    SawOscillators sawOscs;
     
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
-    
-    // Noise Oscillator
-    dsp::Oscillator<float> noiseOscillator{[this](float) {return noise.nextFloat() * 2.0f - 1.0f;}};
 
 	// calculating cents to detune
 	// 1 cent is 1/1200 octave
-	const double root = std::exp(std::log(2) / 1200);
-	// amt of detune is fixed (for now) for the 2nd & 3rd oscillators
-	// raise to the number of cents (15 sounds nice)
-	double cent = pow(root, 15);
+//	const double root = std::exp(std::log(2) / 1200);
+//	// raise to the number of cents (default 15 sounds nice)
+//	double cent = pow(root, 15);
     // to track detune, register parameters on active note
     int currentMidiNote = 60;
 
@@ -557,11 +438,6 @@ private:
     
     // osc params
     int sawRegister;
-    //int sawNum; // I have activeOscs which is in place of this
-    int sawDetune;
-    int sawPhase;
-    float sawStereoWidth;
-    
     
     // osc level params --> MODIFY: might make a mixer class
     float sawGain;

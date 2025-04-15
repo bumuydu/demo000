@@ -46,7 +46,7 @@ namespace Parameters
     static const float defaultNoiseRel = 0.150f;
     static const float defaultNFilt = 0.5f;
     
-    static const int defaultSawReg = 0; // in this case, it sets the default register to 0
+    static const int defaultSawReg = 2; // in this case, it sets the default register to 0
     static const int defaultSawNum = 5;
     static const int defaultDetune = 15;
     static const int defaultPhase = 180;
@@ -61,7 +61,7 @@ namespace Parameters
 	{
 		std::vector<std::unique_ptr<RangedAudioParameter>> params;
 
-        params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawReg,  1 }, "Saw Register", -2, 2, defaultSawReg));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSawReg,  1 }, "Saw Register", StringArray{"-2","-1","0","1","2"}, defaultSawReg));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawNum,  2 }, "# of Saws", 1, 16, defaultSawNum));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameDetune,  3 }, "Detune", 0, 100, defaultDetune));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameStereoWidth,  4 }, "Stereo Width", NormalisableRange<float>(0.0f, 1.0f), defaultStereoWidth));
