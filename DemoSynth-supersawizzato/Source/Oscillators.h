@@ -1,4 +1,5 @@
 #pragma once
+#include "Filters.h"
 
 #define MAX_SAW_OSCS 16
 
@@ -26,12 +27,6 @@ public:
         
         // without this it wouldn't prepare the synth properly
         setActiveOscs(5);
-        
-        // NOISE
-        // We prepare the release envelope generator of the noise osc
-//        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify?
-//        noiseEnvelope.clear();
-//        egNoise.prepareToPlay(sampleRate);
     }
     
     void initializeOscillators()
@@ -43,7 +38,7 @@ public:
         }
     }
     
-    void startNote(int midiNoteNumber, float velocity)
+    void startNote(int midiNoteNumber)
     {
         // Reset phase for each oscillator
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
@@ -56,7 +51,6 @@ public:
 //        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         //setSawFreqs(baseFreq);
         updateFreqs();
-//        trigger = true;
     }
     
     void process(dsp::ProcessContextReplacing<float>& context)
@@ -166,11 +160,87 @@ private:
     double cent = pow(root, 15);
     // to track the parameters of detune & register on active note
     int currentMidiNote = 60;
-    
-//    // We use the JUCE class Random to generate noise
-//    Random noise;
-//    bool trigger = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SawOscillators)
 };
 
+class NoiseOsc
+{
+public:
+    NoiseOsc(){}
+    ~NoiseOsc(){}
+    
+//    NoiseOsc()
+//    :
+//    {
+//    };
+    
+    void releaseResources()
+    {
+        noiseEnvelope.setSize(0, 0);
+    }
+    
+    void prepareToPlay(double sampleRate, int samplesPerBlock)
+    {
+        
+        // NOISE
+        // We prepare the release envelope generator of the noise osc
+        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify?
+        noiseEnvelope.clear();
+        egNoise.prepareToPlay(sampleRate);
+    }
+    
+    void trigger(int startSample, float velocity)
+    {
+//        noiseEnvelope.setSample(0, startSample, velocity);
+//        velocityLevel = velocity;
+        
+        egNoise.noteOn();
+        velocityLevel = velocity;
+        
+    }
+    
+    void process(AudioBuffer<float>& buffer, int startSample, int numSamples, float gain)
+    {
+        
+        auto noiseData = buffer.getArrayOfWritePointers();
+        
+        egNoise.processBlock(noiseEnvelope, startSample, numSamples);
+        // modify? -- realistically, this will only be calculated once and then added to both channels of the outputBuffer
+        const auto numChannels = buffer.getNumChannels();
+        for (int ch = 0; ch < numChannels; ++ch)
+            for (int smp = 0; smp < numSamples; ++smp)
+                noiseData[ch][smp] += velocityLevel * gain * (noise.nextFloat() * 2.0f) - 1.0f;
+        
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            FloatVectorOperations::multiply(noiseData[ch], noiseEnvelope.getReadPointer(0), numSamples);
+        }
+    }
+    
+    // setters & getters
+    
+    void setRelease(const float newValue)
+    {
+        egNoise.setRelease(newValue);
+    }
+    
+    bool envFinished() const
+    {
+        return !egNoise.isActive();
+    }
+    
+    
+private:
+//    dsp::ProcessSpec spec;
+    float velocityLevel = 0.7f;
+
+//    // We use the JUCE class Random to generate noise
+    Random noise;
+    AudioBuffer<float> noiseEnvelope;
+    // envelope generator for the noise osc
+    ReleaseFilter egNoise;
+//    StereoFilter noiseFilter2;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NoiseOsc)
+};

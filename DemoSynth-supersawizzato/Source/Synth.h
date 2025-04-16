@@ -20,12 +20,12 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultNoiseRel = 0.25f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0, int defaultNoiseFilter = 0.5f*/)
-    : sawOscs(defaultSawReg, defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel), egNoise(defaultNoiseRel), sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf),  noiseFiltParam(defaultNoiseFilter)*/
+	SimpleSynthVoice(int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0*/)
+    : sawOscs(defaultSawReg, defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf)*/
 	{
-        noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
-        noiseFilter.setCutoffFrequency(20000.0f);
-        noiseFilter.setResonance(0.1f);
+//        noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+//        noiseFilter.setCutoffFrequency(20000.0f);
+//        noiseFilter.setResonance(0.1f);
 	};
 	
 	~SimpleSynthVoice() {};
@@ -43,8 +43,11 @@ public:
     
     void releaseResources()
     {
-        noiseEnvelope.setSize(0, 0);
-//        oscillators.releaseResources();
+        noiseOsc.releaseResources();
+        oscillatorBuffer.setSize(0, 0);
+        subBuffer.setSize(0, 0);
+        noiseBuffer.setSize(0, 0);
+        mixerBuffer.setSize(0, 0);
     }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
@@ -52,8 +55,8 @@ public:
 	{	
 		// Reset phase for each oscillator
         subOscillator.reset();
-        noiseFilter.reset();
-        sawOscs.startNote(midiNoteNumber, velocity);
+//        noiseFilter.reset();
+        sawOscs.startNote(midiNoteNumber);
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
@@ -81,7 +84,7 @@ public:
 
 		// Se mi chiede di non generare code (o altri casi, tipo se l'ADSR ha già finito la fase di release)
 		// allora segnalo alla classe Synthesiser che questa voce è libera per poter riprodurre altri suoni
-        if (!allowTailOff || ( !ampAdsr.isActive()))
+        if (!allowTailOff || ( !ampAdsr.isActive() /*&& noiseOsc.envFinished()*/))
 			clearCurrentNote();
 	}
 	
@@ -123,7 +126,7 @@ public:
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
         mixerBuffer.clear(0, numSamples);
-        noiseEnvelope.clear(0, numSamples);
+//        noiseEnvelope.clear(0, numSamples);
         
         //DBG("Noise Gain: " << noiseGain);
 
@@ -138,7 +141,7 @@ public:
         dsp::AudioBlock<float> subAudioBlock{ subData, 1, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
         
-        auto noiseData = noiseBuffer.getArrayOfWritePointers();
+//        auto noiseData = noiseBuffer.getArrayOfWritePointers();
 
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 1, (size_t)numSamples };
@@ -148,19 +151,23 @@ public:
         sawOscs.process(context);
         subOscillator.process(subContext);
         
-        // noise oscillator with the ReleaseFilter
+        // noise: trigger the ReleaseFilter envelope
         if(trigger)
         {
-            noiseEnvelope.setSample(0, startSample, velocityLevel);
+//            noiseEnvelope.setSample(0, startSample, velocityLevel);
+            noiseOsc.trigger(startSample, velocityLevel);
             trigger = false;
         }
         
-        egNoise.processBlock(noiseEnvelope, startSample, numSamples);
-        // modify: realistically, this will only be calculated once and then added to both channels of the outputBuffer
-        const auto numChannels = noiseBuffer.getNumChannels();
-        for (int ch = 0; ch < numChannels; ++ch)
-            for (int smp = 0; smp < numSamples; ++smp)
-                noiseData[ch][smp] += velocityLevel * noiseGain * (noise.nextFloat() * 2.0f) - 1.0f;
+        // and process the noise
+        noiseOsc.process(noiseBuffer, startSample, numSamples, noiseGain);
+        
+//        egNoise.processBlock(noiseEnvelope, startSample, numSamples);
+//        // modify: realistically, this will only be calculated once and then added to both channels of the outputBuffer
+//        const auto numChannels = noiseBuffer.getNumChannels();
+//        for (int ch = 0; ch < numChannels; ++ch)
+//            for (int smp = 0; smp < numSamples; ++smp)
+//                noiseData[ch][smp] += velocityLevel * noiseGain * (noise.nextFloat() * 2.0f) - 1.0f;
         
 		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
         
@@ -168,10 +175,10 @@ public:
 //        noiseFilter.process(noiseContext); // old method with Oscillator instance
         noiseFilter2.processBlock(noiseBuffer, numSamples);
         
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
-            FloatVectorOperations::multiply(noiseData[ch], noiseEnvelope.getReadPointer(0), numSamples);
-        }
+//        for (int ch = 0; ch < numChannels; ++ch)
+//        {
+//            FloatVectorOperations::multiply(noiseData[ch], noiseEnvelope.getReadPointer(0), numSamples);
+//        }
         
 		// La modulo in ampiezza con l'ADSR
 		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
@@ -195,7 +202,7 @@ public:
         
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
-        if (!ampAdsr.isActive() && noiseEnvFinished())
+        if (!ampAdsr.isActive() && noiseOsc.envFinished())
         {
             clearCurrentNote();
             trigger = false;
@@ -213,22 +220,25 @@ public:
 		ampAdsr.setParameters(ampAdsrParams);
         
         // We prepare the release envelope generator of the noise osc
-        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify? 
-        noiseEnvelope.clear();
-        egNoise.prepareToPlay(sampleRate);
+        noiseOsc.prepareToPlay(sampleRate, samplesPerBlock);
+//        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify?
+//        noiseEnvelope.clear();
+//        egNoise.prepareToPlay(sampleRate);
         noiseFilter2.prepareToPlay(sampleRate);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
-		spec.maximumBlockSize = samplesPerBlock;
+		// MODIFY: spec for sawOscs might be different --> oversampling
+        spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
 
 		// Inizializzo l'oscillatore
+        // modify: send oversampled sampleRate etc. to the sawOscs
         sawOscs.prepareToPlay(sampleRate, samplesPerBlock, spec);
         subOscillator.prepare(spec);
         ladderFilter.prepare(spec);
-        noiseFilter.prepare(spec);
-        noiseFilter.reset();
+//        noiseFilter.prepare(spec);
+//        noiseFilter.reset();
 
 		// Se non ho intenzione di generare un segnale intrinsecamente
 		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
@@ -294,11 +304,6 @@ public:
     void setNoiseGain(const float newValue)
     {
         noiseGain = newValue;   // modify: smooth it out
-    }
-    
-    void setNoiseRelease(const float newValue)
-    {
-        egNoise.setRelease(newValue);
     }
     
 	// Setters of JUCE's ADSR parameters -- MODIFY: Add slope param. A,D,R ^slope , S^(1/slope)
@@ -376,29 +381,29 @@ public:
 //        ladderFilter.setLfoAmt(newValue);
 //    }
     
-    void setNoiseFilterCutoff(const float newValue)
-    {
-        if (newValue < 0.45f)
-        {           // low-pass
-            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
-            float noiseCutoff = juce::jmap(newValue, 0.0f, 0.45f, 80.0f, 18000.0f);
-            noiseFilter.setCutoffFrequency(noiseCutoff);
-        }else if(newValue < 0.55f)
-        {           // all-pass
-            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
-            noiseFilter.setCutoffFrequency(20000.0f);
-        }else
-        {           // high-pass
-            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::highpass);
-            float cutoff = juce::jmap(newValue, 0.55f, 1.0f, 0.0f, 800.0f);
-            noiseFilter.setCutoffFrequency(cutoff);
-        }
-        noiseFilter.reset();
-    }
+//    void setNoiseFilterCutoff(const float newValue)
+//    {
+//        if (newValue < 0.45f)
+//        {           // low-pass
+////            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+//            float noiseCutoff = juce::jmap(newValue, 0.0f, 0.45f, 80.0f, 18000.0f);
+////            noiseFilter.setCutoffFrequency(noiseCutoff);
+//        }else if(newValue < 0.55f)
+//        {           // all-pass
+////            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+////            noiseFilter.setCutoffFrequency(20000.0f);
+//        }else
+//        {           // high-pass
+////            noiseFilter.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+//            float cutoff = juce::jmap(newValue, 0.55f, 1.0f, 0.0f, 800.0f);
+////            noiseFilter.setCutoffFrequency(cutoff);
+//        }
+////        noiseFilter.reset();
+//    }
     
-    bool noiseEnvFinished() const
+    void setNoiseRelease(const float newValue)
     {
-        return !egNoise.isActive();
+        noiseOsc.setRelease(newValue);
     }
     
 private:
@@ -409,9 +414,9 @@ private:
 	// implementarne uno come quello visto a lezione.
     
     dsp::ProcessSpec spec;
-	
 
     SawOscillators sawOscs;
+    NoiseOsc noiseOsc;
     
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
@@ -430,10 +435,10 @@ private:
     
     bool trigger = false;
     // We use the JUCE class Random to generate noise
-    Random noise;
-    AudioBuffer<float> noiseEnvelope;
+//    Random noise;
+//    AudioBuffer<float> noiseEnvelope;
     // envelope generator for the noise osc
-    ReleaseFilter egNoise;
+//    ReleaseFilter egNoise;
     StereoFilter noiseFilter2;
     
     // osc params
@@ -449,11 +454,10 @@ private:
     
     // modify: are these necessary?
     //int subWaveform;
-    //float noiseFiltParam;
     
     // filters
     LadderFilter ladderFilter;                              // LPF for the whole synth
-    juce::dsp::StateVariableTPTFilter<float> noiseFilter;   // LP/AP/HP filter for the noise oscillator
+//    juce::dsp::StateVariableTPTFilter<float> noiseFilter;   // LP/AP/HP filter for the noise oscillator
     
     // buffers
 	AudioBuffer<float> oscillatorBuffer;

@@ -43,7 +43,7 @@ namespace Parameters
     static const float defaultFiltQ = 0.000f;
     static const float defaultFiltEnv = 0.000f;
     static const float defaultFiltLfo = 0.000f;
-    static const float defaultNoiseRel = 0.150f;
+    static const float defaultNoiseRel = 0.7f;
     static const float defaultNFilt = 0.5f;
     
     static const int defaultSawReg = 2; // in this case, it sets the default register to 0
@@ -75,8 +75,8 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel,  12 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubReg,  13 }, "Sub Register", StringArray{"0","-1","-2"}, defaultSubReg));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf,  14 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz,  15 }, "Cutoff",   NormalisableRange<float>(0.0f, 18000.0f, 1.0f, 0.3f), defaultFiltHz));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  16 }, "Quality", NormalisableRange<float>(0.05f, 1.15f, 0.01f, 0.5f), defaultFiltQ));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz,  15 }, "Cutoff",   NormalisableRange<float>(5.0f, 18000.0f, 1.0f, 0.3f), defaultFiltHz));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  16 }, "Quality", NormalisableRange<float>(0.05f, 1.00f, 0.01f, 0.5f), defaultFiltQ));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv,  17 }, "EG AMT--not yet implemented!", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfo,  18 }, "LFO AMT--not yet implemented!", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfo));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  19 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));

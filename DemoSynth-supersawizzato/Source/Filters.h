@@ -38,7 +38,7 @@ private:
 class ReleaseFilter
 {
 public:
-    ReleaseFilter(double defaultRelease = 0.25)
+    ReleaseFilter(double defaultRelease = 0.7)
         : release(defaultRelease)
     {}
     
@@ -55,12 +55,32 @@ public:
         auto bufferData = buffer.getWritePointer(0);
         const int endSample = numSamples + startSample;
         
+//        for (int smp = startSample; smp < endSample; ++smp)
+//        {
+//            // explicit casting float buffer to double -- old school but compact code
+//            envelope = jmax((double)bufferData[smp], envelope * alpha);
+//            bufferData[smp] = (float)envelope;
+//        }
+        
         for (int smp = startSample; smp < endSample; ++smp)
         {
-            // explicit casting float buffer to double -- old school but compact code
-            envelope = jmax((double)bufferData[smp], envelope * alpha);
-            bufferData[smp] = (float)envelope;
+            if (envelope > 0.0001)
+            {
+                bufferData[smp] = (float)envelope;
+                envelope *= alpha;
+            }
+            else
+            {
+                bufferData[smp] = 0.0f;
+                envelope = 0.0;
+            }
         }
+        
+    }
+    
+    void noteOn()
+    {
+        envelope = 1;
     }
     
     // check if the envelope has (nearly) finished
@@ -121,7 +141,6 @@ public:
         // replacing = all audio data that we modify/generate replaces the old data
         // non-replacing = input buffer and output buffers are different
         //dsp::ProcessContextReplacing<float> context(block);
-        
         
         //iirFilter.process(context);
         // we have more than one channel so
