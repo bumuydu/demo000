@@ -150,8 +150,8 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             if (paramID == Parameters::nameNRel)
                 voice->setNoiseRelease(newValue);
             
-//            if (paramID == Parameters::nameNFilt)
-//                voice->setNoiseFilterCutoff(newValue);
+            if (paramID == Parameters::nameNFilt)
+                voice->setNoiseFilterCutoff(newValue);
                         
 //            if (paramID == Parameters::nameFiltEnv)
 //                voice->setFilterEnvAmt(newValue);

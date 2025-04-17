@@ -15,7 +15,7 @@ public:
         initializeOscillators();
     };
     
-    void prepareToPlay(double sampleRate, int samplesPerBlock, dsp::ProcessSpec specInput)
+    void prepareToPlay(const dsp::ProcessSpec specInput)
     {
         spec = specInput;
         
@@ -48,8 +48,6 @@ public:
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
-//        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-        //setSawFreqs(baseFreq);
         updateFreqs();
     }
     
@@ -180,14 +178,13 @@ public:
         noiseEnvelope.setSize(0, 0);
     }
     
-    void prepareToPlay(double sampleRate, int samplesPerBlock)
+    void prepareToPlay(const dsp::ProcessSpec& spec/*double sampleRate, int samplesPerBlock*/)
     {
-        
         // NOISE
         // We prepare the release envelope generator of the noise osc
-        noiseEnvelope.setSize(1, samplesPerBlock);    // mono --> modify?
+        noiseEnvelope.setSize(1, spec.maximumBlockSize);    // mono --> modify?
         noiseEnvelope.clear();
-        egNoise.prepareToPlay(sampleRate);
+        egNoise.prepareToPlay(spec.sampleRate);
     }
     
     void trigger(int startSample, float velocity)
@@ -202,7 +199,10 @@ public:
     
     void process(AudioBuffer<float>& buffer, int startSample, int numSamples, float gain)
     {
-        
+//        buffer.clear();
+//        noiseEnvelope.clear();
+        if (velocityLevel <= 0.0001f || gain <= 0.0001f || !egNoise.isActive())
+            return;
         auto noiseData = buffer.getArrayOfWritePointers();
         
         egNoise.processBlock(noiseEnvelope, startSample, numSamples);
@@ -210,7 +210,7 @@ public:
         const auto numChannels = buffer.getNumChannels();
         for (int ch = 0; ch < numChannels; ++ch)
             for (int smp = 0; smp < numSamples; ++smp)
-                noiseData[ch][smp] += velocityLevel * gain * (noise.nextFloat() * 2.0f) - 1.0f;
+                noiseData[ch][smp] += velocityLevel * gain * ((noise.nextFloat() * 2.0f) - 1.0f);
         
         for (int ch = 0; ch < numChannels; ++ch)
         {
