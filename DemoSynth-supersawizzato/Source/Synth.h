@@ -127,7 +127,7 @@ public:
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
         
         // modify: must change the number of channels here to 2 to make it stereo
-		dsp::AudioBlock<float> audioBlock{ voiceData, 1, (size_t)numSamples };
+		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
 		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
         auto subData = subBuffer.getArrayOfWritePointers();
@@ -135,10 +135,10 @@ public:
         dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
 
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
-        dsp::AudioBlock<float> mixerBlock{ mixerData, 1, (size_t)numSamples };
-        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+        dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
+//        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
-		// Genero la mie forme d'onda
+		// Genero la mie forme d'onda        
         sawOscs.process(context);
         subOscillator.process(subContext);
         
@@ -163,19 +163,37 @@ public:
 
 		// Volume proporzionale alla velocity
         oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(sawOscs.getActiveOscs()));
+//        for (int ch = 0; ch < oscillatorBuffer.getNumChannels(); ++ch)
+//        {
+//            oscillatorBuffer.applyGain(ch, 0, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
+//        }
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
-        mixerBuffer.applyGain(0, numSamples, 1);
+//        mixerBuffer.applyGain(0, numSamples, 1);
         
         // mix all buffers into one
         mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
-        mixerBuffer.addFrom(0, 0, subBuffer, 0, 0, numSamples);
-        mixerBuffer.addFrom(0, 0, noiseBuffer, 0, 0, numSamples);
+        mixerBuffer.addFrom(1, 0, oscillatorBuffer, 1, 0, numSamples);
+
+        // Then: add mono sub and noise to *both* channels
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            mixerBuffer.addFrom(ch, 0, subBuffer, 0, 0, numSamples);
+            mixerBuffer.addFrom(ch, 0, noiseBuffer, 0, 0, numSamples);
+        }
         
         // process the mixed buffer through a ladder filter
-        ladderFilter.process(mixerContext);
+//        ladderFilter.process(mixerBuffer);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            auto chBlock = mixerBlock.getSingleChannelBlock(ch);
+            dsp::ProcessContextReplacing<float> chContext(chBlock);
+            ladderFilters[ch].process(chContext);
+//            ladderFilters[ch].process(mixerContext);
+        }
         
 		// copy the filtered buffer to the output buffer
-        outputBuffer.addFrom(0, startSample, mixerBuffer, 0, 0, numSamples);
+        for (int ch = 0; ch < 2; ++ch)
+            outputBuffer.addFrom(ch, startSample, mixerBuffer, ch, 0, numSamples);
         
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
@@ -201,12 +219,18 @@ public:
         spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
-
+        stereoSpec.maximumBlockSize = samplesPerBlock;
+        stereoSpec.sampleRate = sampleRate;
+        stereoSpec.numChannels = 2;
+        
 		// Inizializzo l'oscillatore
         // modify: send oversampled sampleRate etc. to the sawOscs
-        sawOscs.prepareToPlay(spec);
+        sawOscs.prepareToPlay(stereoSpec);
         subOscillator.prepare(spec);
-        ladderFilter.prepare(spec);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            ladderFilters[ch].prepare(spec);
+        }
 
         noiseOsc.prepareToPlay(spec);
         noiseFilter.prepareToPlay(spec);
@@ -215,10 +239,10 @@ public:
 		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
 		// poi nel PluginProcessor lo copio su tutti i canali in uscita
         // WILL MODIFY THIS PART!
-		oscillatorBuffer.setSize(1, samplesPerBlock);
+		oscillatorBuffer.setSize(2, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
-        mixerBuffer.setSize(1, samplesPerBlock);
+        mixerBuffer.setSize(2, samplesPerBlock);
 	}
     
     void updateFreqs()
@@ -334,12 +358,20 @@ public:
     
     void setCutoff(const float newValue)
     {
-        ladderFilter.setCutoffFrequencyHz(newValue);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            ladderFilters[ch].setCutoffFrequencyHz(newValue);
+        }
+//        ladderFilter.setCutoff(newValue);
     }
     
     void setQuality(const float newValue)
     {
-        ladderFilter.setResonance(newValue);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            ladderFilters[ch].setResonance(newValue);
+        }
+//        ladderFilter.setResonance(newValue);
     }
     
 //    void setFilterEnvAmt(const float newValue)
@@ -370,6 +402,7 @@ private:
 	// implementarne uno come quello visto a lezione.
     
     dsp::ProcessSpec spec;
+    dsp::ProcessSpec stereoSpec;
 
     SawOscillators sawOscs;
     NoiseOsc noiseOsc;
@@ -402,7 +435,7 @@ private:
     //int subWaveform;
     
     // filters
-    LadderFilter ladderFilter;                              // LPF for the whole synth
+    LadderFilter ladderFilters[2];                              // LPF for the whole synth
     StereoFilter noiseFilter;                              // filter for noise
     
     // buffers

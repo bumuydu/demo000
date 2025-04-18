@@ -59,8 +59,6 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 {
     juce::ScopedNoDenormals noDenormals;
     const auto numSamples = buffer.getNumSamples();
-    // for 2x oversampling the saw waves, we double the sampling rate
-    //const auto SRx2 = numSamples * 2;
 
     // Pulisco il buffer (non c'è input, e le SynthVoice sommano, non sovrascrivono)
     buffer.clear();
@@ -69,8 +67,11 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     mySynth.renderNextBlock(buffer, midiMessages, 0, numSamples);
 
     // Se l'output è stereo copio sul secondo canale il contenuto del primo
-    if (getTotalNumOutputChannels() == 2)
-        buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
+//    if (getTotalNumOutputChannels() == 2)
+//        buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
+    
+    // modify: for mono output --> do we accept or is it stereo by default?
+    //  if mono is available: do we change the logic on how we use the buffer.addFrom() ?
 }
 
 //==============================================================================

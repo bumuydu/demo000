@@ -65,7 +65,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawNum,  2 }, "# of Saws", 1, 16, defaultSawNum));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameDetune,  3 }, "Detune", 0, 100, defaultDetune));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameStereoWidth,  4 }, "Stereo Width", NormalisableRange<float>(0.0f, 1.0f), defaultStereoWidth));
-        params.push_back(std::make_unique<AudioParameterInt>(ParameterID { namePhase, 5 }, "Phase (degrees)", 0, 360, defaultPhase));
+        params.push_back(std::make_unique<AudioParameterInt>(ParameterID { namePhase, 5 }, "Phase (degrees) -- not yet implemented", -180, 180, defaultPhase));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSawLev,  6 }, "Saw Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), defaultSaw));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSubLev,  7 }, "Sub Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNLev,  8 }, "Noise Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));
