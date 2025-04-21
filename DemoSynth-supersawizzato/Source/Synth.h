@@ -139,7 +139,9 @@ public:
 //        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
 		// Genero la mie forme d'onda        
-        sawOscs.process(context);
+//        sawOscs.process(context);
+        sawOscs.processStereo(oscillatorBuffer, numSamples);
+        
         subOscillator.process(subContext);
         
         // noise: trigger the ReleaseFilter envelope

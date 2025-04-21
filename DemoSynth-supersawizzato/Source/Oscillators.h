@@ -18,6 +18,7 @@ public:
     void prepareToPlay(const dsp::ProcessSpec specInput)
     {
         spec = specInput;
+        tmpPanBuffer.setSize(1, spec.maximumBlockSize);
         
         // Inizializzo l'oscillatore
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
@@ -57,6 +58,47 @@ public:
         {
             oscillators[i].process(context);
         }
+    }
+    
+    // the process method now with stereo width parameter that pans every oscillator
+    void processStereo(AudioBuffer<float>& buffer, int numSamples)
+    {
+//        buffer.clear(0, numSamples);
+        auto* left = buffer.getWritePointer(0);
+        auto* right = buffer.getWritePointer(1);
+        
+        // use tmpPanBuffer to process the oscillators
+        // then add its contents to the main buffer applying the pan on buffers
+        for (int i = 0; i < activeOscs; ++i)
+        {
+            tmpPanBuffer.clear(0, numSamples);
+            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer);
+            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
+            
+            oscillators[i].process(tmpPanContext);
+            
+            float oscPosition;
+            if (activeOscs == 1)
+                oscPosition = 0.5f; // don't pan if activeOscs = 1
+            else
+                oscPosition = static_cast<float>(i) / static_cast<float>(activeOscs - 1);
+
+            // since sawStereoWidth's range is [0.0f, 1.0f], we have to work around it to get the pan value right
+            float pan = juce::jmap(sawStereoWidth, 0.5f, oscPosition);
+        
+            // equal power (constant power) panning law
+            float leftGain  = std::cos(pan * MathConstants<float>::halfPi);
+            float rightGain = std::sin(pan * MathConstants<float>::halfPi);
+
+            const float* monoData = tmpPanBuffer.getReadPointer(0);
+
+            for (int smp = 0; smp < numSamples; ++smp)
+            {
+                left[smp]  += monoData[smp] * leftGain;
+                right[smp] += monoData[smp] * rightGain;
+            }
+        }
+        
     }
     
     // methods to calculate the frequencies of each oscillator
@@ -145,6 +187,8 @@ private:
     dsp::Oscillator<float> oscillators[MAX_SAW_OSCS];
     int activeOscs; // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
     
+    AudioBuffer<float> tmpPanBuffer;
+    
     // osc params
     int sawRegister;
     int sawDetune;
@@ -158,6 +202,7 @@ private:
     double cent = pow(root, 15);
     // to track the parameters of detune & register on active note
     int currentMidiNote = 60;
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SawOscillators)
 };
