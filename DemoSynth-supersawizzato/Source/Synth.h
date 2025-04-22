@@ -49,7 +49,7 @@ public:
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
-	{	
+	{
 		// Reset phase for each oscillator
         subOscillator.reset();
         sawOscs.startNote(midiNoteNumber);
@@ -138,10 +138,17 @@ public:
         dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
 //        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
-		// Genero la mie forme d'onda        
+		// Genero la mie forme d'onda
 //        sawOscs.process(context);
-        sawOscs.processStereo(oscillatorBuffer, numSamples);
-        
+//        sawOscs.processStereo(oscillatorBuffer, numSamples);
+
+        // oversampling begins
+        auto oversampledBlock = oversampler->processSamplesUp (audioBlock);
+        // process oversampled block
+        sawOscs.processStereo(oversampledBlock, numSamples * 2);
+        // decimate the samples back to the original sample rate
+        oversampler->processSamplesDown (audioBlock);
+                
         subOscillator.process(subContext);
         
         // noise: trigger the ReleaseFilter envelope
@@ -217,17 +224,21 @@ public:
 		ampAdsr.setParameters(ampAdsrParams);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
-		// MODIFY: spec for sawOscs might be different --> oversampling
         spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
-        stereoSpec.maximumBlockSize = samplesPerBlock;
-        stereoSpec.sampleRate = sampleRate;
-        stereoSpec.numChannels = 2;
+        stereoOversampledSpec.maximumBlockSize = samplesPerBlock * 2;
+        stereoOversampledSpec.sampleRate = sampleRate * 2;
+        stereoOversampledSpec.numChannels = 2;
+        
+        // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
+        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, 1, dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
+        oversampler->initProcessing(samplesPerBlock);
+        oversampler->reset();
         
 		// Inizializzo l'oscillatore
         // modify: send oversampled sampleRate etc. to the sawOscs
-        sawOscs.prepareToPlay(stereoSpec);
+        sawOscs.prepareToPlay(stereoOversampledSpec);
         subOscillator.prepare(spec);
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -404,11 +415,12 @@ private:
 	// implementarne uno come quello visto a lezione.
     
     dsp::ProcessSpec spec;
-    dsp::ProcessSpec stereoSpec;
+    dsp::ProcessSpec stereoOversampledSpec;
+    
+    std::unique_ptr<dsp::Oversampling<float>> oversampler;
 
     SawOscillators sawOscs;
     NoiseOsc noiseOsc;
-    
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
 

@@ -61,11 +61,11 @@ public:
     }
     
     // the process method now with stereo width parameter that pans every oscillator
-    void processStereo(AudioBuffer<float>& buffer, int numSamples)
+    void processStereo(dsp::AudioBlock<float>& block, int numSamples)
     {
-//        buffer.clear(0, numSamples);
-        auto* left = buffer.getWritePointer(0);
-        auto* right = buffer.getWritePointer(1);
+//        DBG("ENTERED processStereo()");
+        auto* left = block.getChannelPointer(0);
+        auto* right = block.getChannelPointer(1);
         
         // use tmpPanBuffer to process the oscillators
         // then add its contents to the main buffer applying the pan on buffers
