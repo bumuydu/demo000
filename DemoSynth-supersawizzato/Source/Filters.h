@@ -1,8 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
 
-//#define MAX_NUM_CH 2
-
 class LadderFilter : public dsp::LadderFilter<float>
 {
 public:
@@ -19,47 +17,7 @@ public:
             dsp::LadderFilter<float>::setResonance(0.0f);
         }
     
-//    void prepare(const dsp::ProcessSpec& spec)
-//    {
-//        for (int i = 0; i < 2; ++i)
-//        {
-//            filters[i].prepare(spec);
-//            
-//            // default values
-//            filters[i].setMode(dsp::LadderFilter<float>::Mode::LPF12);
-//            filters[i].setCutoffFrequencyHz(1000.0f);
-//            filters[i].setResonance(0.0f);
-//        }
-//    }
-    
-//    void process(AudioBuffer<float>& buffer)
-//    {
-//        dsp::AudioBlock<float> block(buffer);
-//
-//        for (int ch = 0; ch < jmin(2, (int)block.getNumChannels()); ++ch)
-//        {
-//            auto chBlock = block.getSingleChannelBlock(ch);
-//            dsp::ProcessContextReplacing<float> context(chBlock);
-//            filters[ch].process(context);
-//        }
-//    }
-    
-//    void setCutoff(float newValue)
-//    {
-//        for (int i = 0; i < 2; ++i)
-//            filters[i].setCutoffFrequencyHz(newValue);
-//    }
-//
-//    void setResonance(float newValue)
-//    {
-//        for (int i = 0; i < 2; ++i)
-//            filters[i].setResonance(newValue);
-//    }
-    
 private:
-    // LadderFilter is mono so we use two of them
-//    dsp::LadderFilter<float> filters[2];
-    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LadderFilter)
 };
 

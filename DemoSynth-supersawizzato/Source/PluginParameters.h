@@ -77,7 +77,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf,  14 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz,  15 }, "Cutoff",   NormalisableRange<float>(5.0f, 18000.0f, 1.0f, 0.3f), defaultFiltHz));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ,  16 }, "Quality", NormalisableRange<float>(0.05f, 1.00f, 0.01f, 0.5f), defaultFiltQ));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv,  17 }, "EG AMT--not yet implemented!", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv,  17 }, "EG AMT", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfo,  18 }, "LFO AMT--not yet implemented!", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfo));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel,  19 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt,  20 }, "Noise Color/Filter (LPF,HPF)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));

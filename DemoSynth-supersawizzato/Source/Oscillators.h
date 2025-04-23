@@ -227,7 +227,7 @@ public:
     {
         // NOISE
         // We prepare the release envelope generator of the noise osc
-        noiseEnvelope.setSize(1, spec.maximumBlockSize);    // mono --> modify?
+        noiseEnvelope.setSize(1, spec.maximumBlockSize);
         noiseEnvelope.clear();
         egNoise.prepareToPlay(spec.sampleRate);
     }
@@ -242,6 +242,7 @@ public:
         
     }
     
+    // old MONO method -- modify: must erase it if it is not going to be used
     void process(AudioBuffer<float>& buffer, int startSample, int numSamples, float gain)
     {
 //        buffer.clear();
@@ -251,7 +252,6 @@ public:
         auto noiseData = buffer.getArrayOfWritePointers();
         
         egNoise.processBlock(noiseEnvelope, startSample, numSamples);
-        // modify? -- realistically, this will only be calculated once and then added to both channels of the outputBuffer
         const auto numChannels = buffer.getNumChannels();
         for (int ch = 0; ch < numChannels; ++ch)
             for (int smp = 0; smp < numSamples; ++smp)
@@ -277,7 +277,6 @@ public:
     
     
 private:
-//    dsp::ProcessSpec spec;
     float velocityLevel = 0.7f;
 
 //    // We use the JUCE class Random to generate noise
@@ -285,7 +284,6 @@ private:
     AudioBuffer<float> noiseEnvelope;
     // envelope generator for the noise osc
     ReleaseFilter egNoise;
-//    StereoFilter noiseFilter2;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NoiseOsc)
 };

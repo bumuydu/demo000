@@ -115,9 +115,7 @@ public:
 		if (!isVoiceActive())
 			return;
 
-		// Pulizia del buffer di lavoro
-		// (userò solo i primi "numSamples" del buffer, da sommare poi nel
-		// buffer di output, da startSample, per numSamples campioni)
+		// Clearing buffers to be processed
 		oscillatorBuffer.clear(0, numSamples);
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
@@ -126,7 +124,6 @@ public:
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
         
-        // modify: must change the number of channels here to 2 to make it stereo
 		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
 		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
@@ -136,7 +133,7 @@ public:
 
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
-//        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
         
 		// Genero la mie forme d'onda
 //        sawOscs.process(context);
@@ -177,7 +174,6 @@ public:
 //            oscillatorBuffer.applyGain(ch, 0, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
 //        }
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
-//        mixerBuffer.applyGain(0, numSamples, 1);
         
         // mix all buffers into one
         mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
@@ -190,15 +186,9 @@ public:
             mixerBuffer.addFrom(ch, 0, noiseBuffer, 0, 0, numSamples);
         }
         
+        // FILTERING
         // process the mixed buffer through a ladder filter
-//        ladderFilter.process(mixerBuffer);
-        for (int ch = 0; ch < 2; ++ch)
-        {
-            auto chBlock = mixerBlock.getSingleChannelBlock(ch);
-            dsp::ProcessContextReplacing<float> chContext(chBlock);
-            ladderFilters[ch].process(chContext);
-//            ladderFilters[ch].process(mixerContext);
-        }
+        ladderFilter.process(mixerContext);
         
 		// copy the filtered buffer to the output buffer
         for (int ch = 0; ch < 2; ++ch)
@@ -224,34 +214,33 @@ public:
 		ampAdsr.setParameters(ampAdsrParams);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
+        // for the mono sounds, i.e. sub and noise
         spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
+        // for the oversampled saw waves
         stereoOversampledSpec.maximumBlockSize = samplesPerBlock * 2;
         stereoOversampledSpec.sampleRate = sampleRate * 2;
         stereoOversampledSpec.numChannels = 2;
+        // for the ladder filter
+        specStereo.maximumBlockSize = samplesPerBlock;
+        specStereo.sampleRate = sampleRate;
+        specStereo.numChannels = 2;
         
         // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
         oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, 1, dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
         oversampler->initProcessing(samplesPerBlock);
         oversampler->reset();
         
-		// Inizializzo l'oscillatore
-        // modify: send oversampled sampleRate etc. to the sawOscs
+		// initializing oscillators, noise generator and filters
         sawOscs.prepareToPlay(stereoOversampledSpec);
         subOscillator.prepare(spec);
-        for (int ch = 0; ch < 2; ++ch)
-        {
-            ladderFilters[ch].prepare(spec);
-        }
+
+        ladderFilter.prepare(specStereo);
 
         noiseOsc.prepareToPlay(spec);
         noiseFilter.prepareToPlay(spec);
 
-		// Se non ho intenzione di generare un segnale intrinsecamente
-		// stereo è inutile calcolare più di un canale. Ne calcolo 1 e 
-		// poi nel PluginProcessor lo copio su tutti i canali in uscita
-        // WILL MODIFY THIS PART!
 		oscillatorBuffer.setSize(2, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
@@ -281,7 +270,6 @@ public:
     void setSawNum(const int newValue)
     {
         sawOscs.setActiveOscs(newValue);
-        //activeOscs = newValue;
     }
     
     void setSawDetune(const float newValue)
@@ -301,17 +289,17 @@ public:
     
     void setSawGain(const float newValue)
     {
-        sawGain = newValue; // modify: make it smooth
+        sawGain = newValue;
     }
     
     void setSubGain(const float newValue)
     {
-        subGain = newValue; // modify: smooth it out
+        subGain = newValue;
     }
     
     void setNoiseGain(const float newValue)
     {
-        noiseGain = newValue;   // modify: smooth it out
+        noiseGain = newValue;
     }
     
 	// Setters of JUCE's ADSR parameters -- MODIFY: Add slope param. A,D,R ^slope , S^(1/slope)
@@ -349,7 +337,7 @@ public:
     {
         switch (newValue)
                 {
-                case 0: // sinusoidale
+                case 0: // sinusoidal
                     subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
                     break;
                 case 1: // square
@@ -364,34 +352,26 @@ public:
                     //jassertfalse;
                     break;
                 }
-        //dsp::ProcessSpec spec;
         subOscillator.prepare(spec);
         updateFreqs();
     }
     
     void setCutoff(const float newValue)
     {
-        for (int ch = 0; ch < 2; ++ch)
-        {
-            ladderFilters[ch].setCutoffFrequencyHz(newValue);
-        }
-//        ladderFilter.setCutoff(newValue);
+        ladderFilter.setCutoffFrequencyHz(newValue);
     }
     
     void setQuality(const float newValue)
     {
-        for (int ch = 0; ch < 2; ++ch)
-        {
-            ladderFilters[ch].setResonance(newValue);
-        }
-//        ladderFilter.setResonance(newValue);
+        ladderFilter.setResonance(newValue);
     }
     
-//    void setFilterEnvAmt(const float newValue)
-//    {
+    void setFilterEnvAmt(const float newValue)
+    {
 //        ladderFilter.setEnvAmt(newValue);
-//    }
-//    
+        egAmt = newValue;
+    }
+    
 //    void nameFiltLfo(const float newValue)
 //    {
 //        ladderFilter.setLfoAmt(newValue);
@@ -408,13 +388,8 @@ public:
     }
     
 private:
-	// La classe dsp::Oscillator può essere inizializzata con una lambda da usare come forma d'onda
-	// (x va da -pi a + pi) e con un intero facoltativo che (se presente e diverso da 0) indica alla
-	// classe di usare una lookup table di quelle dimensioni.
-	// Se si vuole usare un oscillatore dalla forma d'onda variabile o con più parametri è meglio
-	// implementarne uno come quello visto a lezione.
-    
     dsp::ProcessSpec spec;
+    dsp::ProcessSpec specStereo;
     dsp::ProcessSpec stereoOversampledSpec;
     
     std::unique_ptr<dsp::Oversampling<float>> oversampler;
@@ -437,7 +412,7 @@ private:
     // osc params
     int sawRegister;
     
-    // osc level params --> MODIFY: might make a mixer class
+    // osc level params
     float sawGain;
     float subGain;
     float noiseGain;
@@ -445,12 +420,13 @@ private:
     // sub params
     int subRegister;
     
-    // modify: are these necessary?
+    // modify: are these necessary? for initial parameter values in the interface... maybe? -- have to check
     //int subWaveform;
     
     // filters
-    LadderFilter ladderFilters[2];                              // LPF for the whole synth
-    StereoFilter noiseFilter;                              // filter for noise
+    LadderFilter ladderFilter;          // LPF for the whole synth
+    StereoFilter noiseFilter;           // filter for noise
+    float egAmt = 0;
     
     // buffers
 	AudioBuffer<float> oscillatorBuffer;
