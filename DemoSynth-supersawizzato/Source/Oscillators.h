@@ -9,8 +9,8 @@ public:
     SawOscillators(){}
     ~SawOscillators(){}
     
-    SawOscillators(int defaultSawReg, int defaultSawNum, int defaultDetune, float defaultPhase, float defaultStereoWidth)
-    : sawRegister(defaultSawReg), activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth)
+    SawOscillators(int defaultSawNum, int defaultDetune, float defaultPhase, float defaultStereoWidth)
+    : activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth)
     {
         initializeOscillators();
     };
@@ -18,7 +18,7 @@ public:
     void prepareToPlay(const dsp::ProcessSpec specInput)
     {
         spec = specInput;
-        tmpPanBuffer.setSize(1, spec.maximumBlockSize);
+        tmpPanBuffer.setSize(2, spec.maximumBlockSize);
         
         // Inizializzo l'oscillatore
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
@@ -52,31 +52,22 @@ public:
         updateFreqs();
     }
     
-    void process(dsp::ProcessContextReplacing<float>& context)
-    {
-        for (int i = 0; i < activeOscs; ++i)
-        {
-            oscillators[i].process(context);
-        }
-    }
+//    void process(dsp::ProcessContextReplacing<float>& context)
+//    {
+//        for (int i = 0; i < activeOscs; ++i)
+//        {
+//            oscillators[i].process(context);
+//        }
+//    }
     
     // the process method now with stereo width parameter that pans every oscillator
     void processStereo(dsp::AudioBlock<float>& block, int numSamples)
     {
-//        DBG("ENTERED processStereo()");
         auto* left = block.getChannelPointer(0);
         auto* right = block.getChannelPointer(1);
-        
-        // use tmpPanBuffer to process the oscillators
-        // then add its contents to the main buffer applying the pan on buffers
+
         for (int i = 0; i < activeOscs; ++i)
         {
-            tmpPanBuffer.clear(0, numSamples);
-            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer);
-            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
-            
-            oscillators[i].process(tmpPanContext);
-            
             float oscPosition;
             if (activeOscs == 1)
                 oscPosition = 0.5f; // don't pan if activeOscs = 1
@@ -85,27 +76,36 @@ public:
 
             // since sawStereoWidth's range is [0.0f, 1.0f], we have to work around it to get the pan value right
             float pan = juce::jmap(sawStereoWidth, 0.5f, oscPosition);
-        
+            
             // equal power (constant power) panning law
-            float leftGain  = std::cos(pan * MathConstants<float>::halfPi);
-            float rightGain = std::sin(pan * MathConstants<float>::halfPi);
+            float leftGain  = std::cos(pan * juce::MathConstants<float>::halfPi);
+            float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
 
-            const float* monoData = tmpPanBuffer.getReadPointer(0);
+            // use tmpPanBuffer to process the oscillators
+            // then add its contents to the main buffer applying the pan on buffers
+            tmpPanBuffer.setSize(2, numSamples, false, false, true);
+            tmpPanBuffer.clear();
+            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer);
+            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
+
+            oscillators[i].process(tmpPanContext);
+
+            const float* tmpL = tmpPanBlock.getChannelPointer(0);
+            const float* tmpR = tmpPanBlock.getChannelPointer(1);
 
             for (int smp = 0; smp < numSamples; ++smp)
             {
-                left[smp]  += monoData[smp] * leftGain;
-                right[smp] += monoData[smp] * rightGain;
+                left[smp]  += tmpL[smp] * leftGain;
+                right[smp] += tmpR[smp] * rightGain;
             }
         }
-        
     }
     
     // methods to calculate the frequencies of each oscillator
     
     void updateFreqs()
     {
-        float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister);
+        float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister + 1);
         setSawFreqs(baseFreq);
     }
     
@@ -190,7 +190,7 @@ private:
     AudioBuffer<float> tmpPanBuffer;
     
     // osc params
-    int sawRegister;
+    int sawRegister = -2;
     int sawDetune;
     int sawPhase;
     float sawStereoWidth;

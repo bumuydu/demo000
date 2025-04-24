@@ -20,8 +20,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice(int defaultSawReg = 0, int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0*/)
-    : sawOscs(defaultSawReg, defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), sawRegister(defaultSawReg), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf)*/
+	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0*/)
+    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf)*/
 	{
 	};
 	
@@ -56,13 +56,14 @@ public:
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
-        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
-        sawOscs.setSawFreqs(baseFreq);
+//        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
+//        sawOscs.setSawFreqs(baseFreq);
         
+        updateFreqs();  // this is mainly used so the sub can calculate its freq
         // sub frequency calculation
             // +1 because the default value is 0, but sub is supposed to be 1 oct below main osc
-        float subFreq = baseFreq / std::pow(2, subRegister + 1);
-        subOscillator.setFrequency(subFreq);
+//        float subFreq = baseFreq / std::pow(2, subRegister + 2);
+//        subOscillator.setFrequency(subFreq);
 
 		// Triggero l'ADSR
 		ampAdsr.noteOn();
@@ -139,9 +140,13 @@ public:
 //        sawOscs.process(context);
 //        sawOscs.processStereo(oscillatorBuffer, numSamples);
 
+        // to recalculate detune frequencies etc.
+        sawOscs.updateFreqs();
+        
+        // 2X OVERSAMPLING
         // oversampling begins
         auto oversampledBlock = oversampler->processSamplesUp (audioBlock);
-        // process oversampled block
+        // process oversampled block with twice the number of samples
         sawOscs.processStereo(oversampledBlock, numSamples * 2);
         // decimate the samples back to the original sample rate
         oversampler->processSamplesDown (audioBlock);
@@ -250,10 +255,10 @@ public:
     void updateFreqs()
     {
 //        if (isVoiceActive()) {
-            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister);
+            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister + 1);
             sawOscs.setSawFreqs(baseFreq);
             
-            float subFreq = baseFreq / std::pow(2, subRegister + 1);
+            float subFreq = baseFreq / std::pow(2, subRegister + 3);
             subOscillator.setFrequency(subFreq);
 //        }
     }
@@ -410,7 +415,7 @@ private:
     bool trigger = false;
     
     // osc params
-    int sawRegister;
+    int sawRegister = 0;
     
     // osc level params
     float sawGain;
