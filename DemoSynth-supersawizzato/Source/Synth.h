@@ -20,8 +20,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0 /*, int defaultSubWf = 0*/)
-    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg)/*, subWaveform(defaultSubWf)*/
+	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f /*, int defaultSubWf = 0*/)
+    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt)/*, subWaveform(defaultSubWf)*/
 	{
 	};
 	
@@ -193,7 +193,10 @@ public:
         
         // FILTERING
         // process the mixed buffer through a ladder filter
-        ladderFilter.process(mixerContext);
+//        ladderFilter.process(mixerContext);
+        
+        // to filter with the EG amt parameter, we must get ADSR values and modulate the cutoff with its values * egAmt
+        ladderFilter.processWithEG(mixerContext, ampAdsr, numSamples);
         
 		// copy the filtered buffer to the output buffer
         for (int ch = 0; ch < 2; ++ch)
@@ -363,7 +366,7 @@ public:
     
     void setCutoff(const float newValue)
     {
-        ladderFilter.setCutoffFrequencyHz(newValue);
+        ladderFilter.setCutoff(newValue);
     }
     
     void setQuality(const float newValue)
@@ -373,8 +376,8 @@ public:
     
     void setFilterEnvAmt(const float newValue)
     {
-//        ladderFilter.setEnvAmt(newValue);
-        egAmt = newValue;
+        ladderFilter.setEnvAmt(newValue);
+//        egAmt = newValue;
     }
     
 //    void nameFiltLfo(const float newValue)
@@ -431,7 +434,7 @@ private:
     // filters
     LadderFilter ladderFilter;          // LPF for the whole synth
     StereoFilter noiseFilter;           // filter for noise
-    float egAmt = 0;
+    float egAmt = 0.0f;
     
     // buffers
 	AudioBuffer<float> oscillatorBuffer;

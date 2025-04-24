@@ -17,7 +17,76 @@ public:
             dsp::LadderFilter<float>::setResonance(0.0f);
         }
     
+    void processWithEG(dsp::ProcessContextReplacing<float>& context, ADSR& adsr, int numSamples)
+    {
+//        auto mixerData = buffer.getArrayOfWritePointers();
+//        dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
+//        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+        
+//        if(egAmt == 0)
+//        {
+//            
+//            dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
+//            dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+//            process(mixerContext);
+//        }
+//        else
+//        {
+//            // must loop over channels and samples to process
+//            for (int smp = 0; smp < numSamples; ++smp)
+//            {
+//                float env = adsr.getNextSample();
+//                DBG("env val:" + String(env));
+//                DBG("egAmt:" + String(egAmt));
+//                DBG("cutoff:" + String(cutoff));
+//
+//                float modulatedCutoff = cutoff + (env * egAmt * 5000.0f);
+//                DBG("MODDED:" + String(modulatedCutoff));
+//                modulatedCutoff = jlimit(20.0f, 20000.0f, modulatedCutoff);
+//                setCutoffFrequencyHz(modulatedCutoff);
+//                
+//                for (int ch = 0; ch < 2; ++ch)
+//                {
+//                    mixerData[ch][smp] = processSample(mixerData[ch][smp], ch);
+//                }
+//            }
+//        }
+        
+        // working sample by sample was TOO CPU-heavy -- would completely become noise
+        // again, using context instead of
+        
+        float modulatedCutoff;
+        if (abs(egAmt) < 0.001f)
+        {
+            modulatedCutoff = cutoff;
+        }
+        else
+        {
+            // Get envelope value WITHOUT advancing the state used for gain processing
+            float env = adsr.getNextSample();
+            modulatedCutoff = cutoff + (env * egAmt * 5000.0f);
+        }
+        // the cutoff must stay inside the audible range
+        modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
+        setCutoffFrequencyHz(modulatedCutoff);
+        process(context);
+    }
+    
+    void setCutoff(float newValue)
+    {
+        cutoff = newValue;
+        setCutoffFrequencyHz(cutoff);
+    }
+    
+    void setEnvAmt(float newValue)
+    {
+        egAmt = newValue;
+    }
+    
 private:
+    float egAmt = 0;
+    float cutoff;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LadderFilter)
 };
 
