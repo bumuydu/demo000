@@ -287,3 +287,110 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NoiseOsc)
 };
+
+
+class NaiveOscillator {
+public:
+    NaiveOscillator(const double defaultFrequency = 20.0, const int defaultWaveform = 0)
+    {
+        frequency.setTargetValue(defaultFrequency);
+        waveform = defaultWaveform;
+    }
+
+    ~NaiveOscillator(){}
+
+    void prepareToPlay(const double sampleRate)
+    {
+        frequency.reset(sampleRate, 0.02);
+        samplePeriod = 1.0 / sampleRate;
+    }
+
+    void setFrequency(const double newValue)
+    {
+        // no zero-frequency allowed
+        jassert(newValue > 0);
+        // important to put a comment over jassert for YOURSELF
+        // because if it happens, in the debugger that comment is printed!!
+
+        frequency.setTargetValue(newValue);
+    }
+
+    void setWaveform(const int newValue)
+    {
+        waveform = newValue;
+    }
+    
+    void setSyncOn(const int newValue)
+    {
+        sync = newValue;
+    }
+
+    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
+    {
+        const int numCh = buffer.getNumChannels();
+        auto data = buffer.getArrayOfWritePointers();
+
+        // numSamples - 1 because I return the last sample
+        for (int smp = 0; smp < numSamples - 1; ++smp)
+        {
+            const double sampleValue = getNextAudioSample();
+
+            for (int ch = 0; ch < numCh; ++ch)
+            {
+                data[ch][smp] = sampleValue;
+            }
+        }
+        return getNextAudioSample();
+    }
+
+    float getNextAudioSample()
+    {
+        auto sampleValue = 0.0;
+
+        switch (waveform)
+        {
+        case 0: // sinusoidale
+            sampleValue = sin(MathConstants<double>::twoPi * currentPhase);
+            break;
+        case 1: // triangular
+            sampleValue = 4.0 * abs(currentPhase - 0.5) - 1.0;
+            break;
+        case 2: // saw UP
+            sampleValue = 2.0 * currentPhase - 1.0;
+            break;
+        case 3: // square
+            sampleValue = (currentPhase > 0.5) - (currentPhase < 0.5);
+            break;
+//        case 4: // Stepped S&H
+//                sampleValue = ... ;
+//        case 5: // Smooth S&H
+//                sampleValue = ... ;
+        default:
+            // If it comes here, there is sth wrong
+            // LFO Oscillator not selected correctly
+            jassertfalse;
+            break;
+        }
+
+        phaseIncrement = frequency.getNextValue() * samplePeriod;
+        currentPhase += phaseIncrement;
+        currentPhase -= static_cast<int>(currentPhase);
+
+        return sampleValue;
+    }
+
+private:
+
+    int waveform;
+    bool sync;
+
+    // we do multiplicative this time but it must not be freq=0, put assert in setFreq()
+    // questo, siccome e' un SmoothedValue va resettato nel prepareToPlay()
+    SmoothedValue<double, ValueSmoothingTypes::Multiplicative> frequency;
+
+    double currentPhase = 0;
+    double phaseIncrement = 0;
+    double samplePeriod = 1.0;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NaiveOscillator)
+};

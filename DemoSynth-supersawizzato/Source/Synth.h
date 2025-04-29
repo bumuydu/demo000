@@ -20,8 +20,8 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f /*, int defaultSubWf = 0*/)
-    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt)/*, subWaveform(defaultSubWf)*/
+	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 20.0, int defaultLfoWf = 0 /*, int defaultSubWf = 0*/)
+    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
 	{
 	};
 	
@@ -45,6 +45,7 @@ public:
         subBuffer.setSize(0, 0);
         noiseBuffer.setSize(0, 0);
         mixerBuffer.setSize(0, 0);
+        modulation.setSize(0, 0);
     }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
@@ -108,11 +109,10 @@ public:
 	{
 
 		// [Solitamente qui ci stanno cose tipo gli LFO]
-
-		// Se la voce non è attiva ci si può fermare qui.
-		// In caso si voglia comunque "far trascorrere il tempo" per alcune componenti (ad esempio 
-		// far avanzare gli LFO anche mentre la voce non sta suonando), queste operazioni vanno
-		// fatte prima di questo controllo.
+        // calculates the audio block and returns the last sample
+        float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
+        
+		// Se la voce non è attiva ci si può fermare qui
 		if (!isVoiceActive())
 			return;
 
@@ -196,7 +196,7 @@ public:
 //        ladderFilter.process(mixerContext);
         
         // to filter with the EG amt parameter, we must get ADSR values and modulate the cutoff with its values * egAmt
-        ladderFilter.processWithEG(mixerContext, ampAdsr, numSamples);
+        ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
         
 		// copy the filtered buffer to the output buffer
         for (int ch = 0; ch < 2; ++ch)
@@ -220,6 +220,8 @@ public:
 		// Resetto gli ADSR
 		ampAdsr.setSampleRate(sampleRate);
 		ampAdsr.setParameters(ampAdsrParams);
+        
+        lfo.prepareToPlay(sampleRate);
 
 		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
         // for the mono sounds, i.e. sub and noise
@@ -253,6 +255,7 @@ public:
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
         mixerBuffer.setSize(2, samplesPerBlock);
+        modulation.setSize(2, samplesPerBlock);
 	}
     
     void updateFreqs()
@@ -380,10 +383,25 @@ public:
 //        egAmt = newValue;
     }
     
-//    void nameFiltLfo(const float newValue)
-//    {
-//        ladderFilter.setLfoAmt(newValue);
-//    }
+    void setFilterLfoAmt(const float newValue)
+    {
+        ladderFilter.setLfoAmt(newValue);
+    }
+    
+    void setLfoWf(const int newValue)
+    {
+        lfo.setWaveform(newValue);
+    }
+    
+    void setLfoFreq(const float newValue)
+    {
+        lfo.setFrequency(newValue);
+    }
+    
+    void setLfoSync(const int newValue)
+    {
+        lfo.setSyncOn(newValue);
+    }
     
     void setNoiseFilterCutoff(const float newValue)
     {
@@ -406,6 +424,7 @@ private:
     NoiseOsc noiseOsc;
     // Sub Oscillator
     dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
+    NaiveOscillator lfo;
 
     // to track detune, register parameters on active note
     int currentMidiNote = 60;
@@ -441,6 +460,7 @@ private:
     AudioBuffer<float> subBuffer;
     AudioBuffer<float> noiseBuffer;
     AudioBuffer<float> mixerBuffer;
+    AudioBuffer<double> modulation;
 	float velocityLevel = 0.7f;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleSynthVoice)

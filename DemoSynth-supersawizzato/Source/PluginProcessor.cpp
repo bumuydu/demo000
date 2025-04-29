@@ -156,9 +156,18 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
                         
             if (paramID == Parameters::nameFiltEnv)
                 voice->setFilterEnvAmt(newValue);
-//            
-//            if (paramID == Parameters::nameFiltLfo)
-//                voice->setFilterLfoAmt(newValue);
+            
+            if (paramID == Parameters::nameFiltLfoAmt)
+                voice->setFilterLfoAmt(newValue);
+            
+            if (paramID == Parameters::nameLfoWf)
+                voice->setLfoWf(newValue);
+            
+            if (paramID == Parameters::nameLfoFreq)
+                voice->setLfoFreq(newValue);
+            
+            if (paramID == Parameters::nameLfoSync)
+                voice->setLfoSync(newValue);
 
                 
         }
