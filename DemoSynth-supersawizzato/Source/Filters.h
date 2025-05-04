@@ -58,7 +58,7 @@ public:
         float modulatedCutoff;
         
         float env = adsr.getNextSample();
-//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f);
+//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f);           // 5000 Hz seems audible to control these parameters
         modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
 
         // the cutoff must stay inside the audible range

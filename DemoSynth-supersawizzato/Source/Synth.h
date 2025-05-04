@@ -32,9 +32,6 @@ public:
 	// Deve ritornare true se questa voce è adibita alla riproduzione di un certo SynthSound.
 	bool canPlaySound(SynthesiserSound* sound) override
 	{
-		// Se la classe Synthesiser di JUCE sta cercando di suonare un "MySynthSound" con questa voce
-		// allora ritorna true, altrimenti il dynamic casting fallisce (= nullptr) e ritorna false.
-		// (per questo esempio non servono meccanismi più raffinati)
 		return dynamic_cast<MySynthSound*>(sound) != nullptr;
 	}
     
@@ -57,16 +54,9 @@ public:
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
-//        float baseFreq = MidiMessage::getMidiNoteInHertz(midiNoteNumber) * std::pow(2, sawRegister);
-//        sawOscs.setSawFreqs(baseFreq);
-        
         updateFreqs();  // this is mainly used so the sub can calculate its freq
-        // sub frequency calculation
-            // +1 because the default value is 0, but sub is supposed to be 1 oct below main osc
-//        float subFreq = baseFreq / std::pow(2, subRegister + 2);
-//        subOscillator.setFrequency(subFreq);
 
-		// Triggero l'ADSR
+		// Trigger the ADSR
 		ampAdsr.noteOn();
         
 		// Mi salvo la velocity da usare come volume della nota suonata
@@ -77,11 +67,10 @@ public:
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-off assegnato a questa voce
 	void stopNote(float velocity, bool allowTailOff) override
 	{
-		// Triggero la fase di release dell'ADSR
+		// Trigger the release phase of the ADSR
 		ampAdsr.noteOff();
 
-		// Se mi chiede di non generare code (o altri casi, tipo se l'ADSR ha già finito la fase di release)
-		// allora segnalo alla classe Synthesiser che questa voce è libera per poter riprodurre altri suoni
+		// signaling that this voice is now free process new sounds
         if (!allowTailOff || ( !ampAdsr.isActive() /*&& noiseOsc.envFinished()*/))
 			clearCurrentNote();
 	}
@@ -92,23 +81,8 @@ public:
 	// Metodo chiamato dalla classe Synthesiser in caso venga mossa la pitch-wheel
 	void pitchWheelMoved(int newPitchWheelValue) override {}
 
-	// Metodo chiamato da Synthesiser per chiedere alla voce di riempire l'outputBuffer.
-	// Noterete che non c'è il buffer MIDI, questo perchè in caso di eventi MIDI all'interno di
-	// un buffer di lunghezza normale, la classe Synthsiser spezza il buffer in più blocchi:
-	// MIDI events:   !.......!....!...!.........!.....
-	// AudioBuffers:  |.....|.|....|...|.....|...|.....
-	// In questo modo si può renderizzare l'audio senza preoccuparsi degli eventi MIDI (che 
-	// sono gestiti attraverso gli altri metodi precedenti).
-	// ATTENZIONE: Questo è realizzato non istanziando diversi mini-buffer, ma passando il buffer
-	// intero insieme a due interi: startSample e numSamples, tenete sempre conto di questi due valori
-	// quando andate a riempire l'output buffer!
-	// Si noti che lo stesso buffer viene passato a tutte le voci di polifonia, non va quindi riempito
-	// sovrascrivendo il contenuto, ma gli va sommato sopra quanto generato nella SynthVoice.
-	//
 	void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override
 	{
-
-		// [Solitamente qui ci stanno cose tipo gli LFO]
         // calculates the audio block and returns the last sample
         float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
         
@@ -135,15 +109,11 @@ public:
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
-        
-		// Genero la mie forme d'onda
-//        sawOscs.process(context);
-//        sawOscs.processStereo(oscillatorBuffer, numSamples);
 
-        // to recalculate detune frequencies etc.
+        // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
         sawOscs.updateFreqs();
         
-        // 2X OVERSAMPLING
+        // 2X OVERSAMPLING -- generate sounds
         // oversampling begins
         auto oversampledBlock = oversampler->processSamplesUp (audioBlock);
         // process oversampled block with twice the number of samples
@@ -173,11 +143,10 @@ public:
         ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
-        oscillatorBuffer.applyGain(0, numSamples, velocityLevel * sawGain / sqrt(sawOscs.getActiveOscs()));
-//        for (int ch = 0; ch < oscillatorBuffer.getNumChannels(); ++ch)
-//        {
-//            oscillatorBuffer.applyGain(ch, 0, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
-//        }
+        for (int ch = 0; ch < oscillatorBuffer.getNumChannels(); ++ch)
+        {
+            oscillatorBuffer.applyGain(ch, 0, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
+        }
         subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
         
         // mix all buffers into one
@@ -191,11 +160,9 @@ public:
             mixerBuffer.addFrom(ch, 0, noiseBuffer, 0, 0, numSamples);
         }
         
-        // FILTERING
-        // process the mixed buffer through a ladder filter
+        // FILTERING - process the mixed buffer through a ladder filter
 //        ladderFilter.process(mixerContext);
-        
-        // to filter with the EG amt parameter, we must get ADSR values and modulate the cutoff with its values * egAmt
+        // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
         ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
         
 		// copy the filtered buffer to the output buffer
