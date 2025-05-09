@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "MyADSR.h"
 
 class LadderFilter : public dsp::LadderFilter<float>
 {
@@ -17,7 +18,7 @@ public:
             dsp::LadderFilter<float>::setResonance(0.0f);
         }
     
-    void processWithEG(dsp::ProcessContextReplacing<float>& context, ADSR& adsr, float lfoVal, int numSamples)
+    void processWithEG(dsp::ProcessContextReplacing<float>& context, MyADSR& adsr, float lfoVal, int numSamples)
     {
 //        auto mixerData = buffer.getArrayOfWritePointers();
 //        dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };

@@ -1,5 +1,6 @@
 #pragma once
 #include "Filters.h"
+#include "Tempo.h"
 
 #define MAX_SAW_OSCS 16
 
@@ -68,6 +69,8 @@ public:
 
         for (int i = 0; i < activeOscs; ++i)
         {
+            tmpPanBuffer.clear();
+            
             float oscPosition;
             if (activeOscs == 1)
                 oscPosition = 0.5f; // don't pan if activeOscs = 1
@@ -83,9 +86,9 @@ public:
 
             // use tmpPanBuffer to process the oscillators
             // then add its contents to the main buffer applying the pan on buffers
-            tmpPanBuffer.setSize(2, numSamples, false, false, true);
-            tmpPanBuffer.clear();
-            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer);
+                // check if this works, try using startSample as well as numSamples
+                // if not, try using NaiveOscillator and process on the buffer rather than the audiocontext
+            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer.getArrayOfWritePointers(), 2, numSamples);
             dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
 
             oscillators[i].process(tmpPanContext);
@@ -299,10 +302,11 @@ public:
 
     ~NaiveOscillator(){}
 
-    void prepareToPlay(const double sampleRate)
+    void prepareToPlay(const double sr)
     {
-        frequency.reset(sampleRate, 0.02);
-        samplePeriod = 1.0 / sampleRate;
+        frequency.reset(sr, 0.02);
+        samplePeriod = 1.0 / sr;
+        sampleRate = sr;
     }
 
     void setFrequency(const double newValue)
@@ -314,6 +318,11 @@ public:
 
         frequency.setTargetValue(newValue);
     }
+    
+    void setRate(const float newValue)
+    {
+        ppqPeriod = MetricTime::duration[roundToInt(newValue)].value * 4.0;
+    }
 
     void setWaveform(const int newValue)
     {
@@ -322,7 +331,7 @@ public:
     
     void setSyncOn(const int newValue)
     {
-        sync = newValue;
+        synced = newValue;
     }
 
     float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
@@ -371,18 +380,39 @@ public:
             jassertfalse;
             break;
         }
-
-        phaseIncrement = frequency.getNextValue() * samplePeriod;
-        currentPhase += phaseIncrement;
-        currentPhase -= static_cast<int>(currentPhase);
+        
+        if(synced)
+            updatePhaseSync();
+        else
+        {
+            phaseIncrement = frequency.getNextValue() * samplePeriod;
+            currentPhase += phaseIncrement;
+            currentPhase -= static_cast<int>(currentPhase);
+        }
 
         return sampleValue;
+    }
+    
+    void updatePosition(AudioPlayHead::CurrentPositionInfo newPosition)
+    {
+        if (synced)
+        {
+            syncPhaseIncrement = ((newPosition.bpm / 60.0) / ppqPeriod) * samplePeriod;
+            if (newPosition.isPlaying)
+                currentPhase = fmod(newPosition.ppqPosition, ppqPeriod) / ppqPeriod;
+        }
+    }
+    
+    void updatePhaseSync()
+    {
+        nominalPhase += syncPhaseIncrement;
+        nominalPhase -= static_cast<int>(nominalPhase);
     }
 
 private:
 
     int waveform;
-    bool sync;
+    bool synced = 0;
 
     // we do multiplicative this time but it must not be freq=0, put assert in setFreq()
     // questo, siccome e' un SmoothedValue va resettato nel prepareToPlay()
@@ -391,6 +421,10 @@ private:
     double currentPhase = 0;
     double phaseIncrement = 0;
     double samplePeriod = 1.0;
+    double sampleRate = 0.0;
+    double ppqPeriod = 0.0;
+    double syncPhaseIncrement = 0.0;
+    double nominalPhase = 0.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NaiveOscillator)
 };

@@ -31,7 +31,8 @@ public:
     void setCurrentProgram(int index) override   {};
     const juce::String getProgramName (int index) override { return {}; }
     void changeProgramName (int index, const juce::String& newName) override {}
-
+    AudioPlayHead::CurrentPositionInfo retriveAudioPositionInfo(AudioPlayHead* plyHead);
+    
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;

@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "Tempo.h"
 
 namespace Parameters
 {
@@ -24,6 +25,7 @@ namespace Parameters
     static const String nameFiltLfoAmt = "LFOAMT";
     static const String nameLfoWf = "LFOWF";
     static const String nameLfoFreq = "LFOFREQ";
+    static const String nameLfoRate = "LFORATE";
     static const String nameLfoSync = "LFOSYNC";
     static const String nameNRel = "NOISEREL";
     static const String nameNFilt = "NFILT";
@@ -54,6 +56,7 @@ namespace Parameters
     static const int defaultSubWf = 0;
     static const int defaultLfoWf = 0;
     static const int defaultLfoSync = 0;
+    static const int defaultLfoRate = 0;
     
 //    static const float defaultSub = -20.000f;   // I want these two off by default --> set to dbFloor
 //    static const float defaultNoise = -20.000f;
@@ -78,14 +81,15 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv, 13 }, "EG AMT", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoWf, 14 }, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Square","Stepped S&H","Smooth S&H"}, defaultLfoWf));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfoAmt, 15 }, "LFO AMT", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfoAmt));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameLfoFreq, 16 }, "LFO RATE/FREQ", NormalisableRange<float>(0.1f, 20.0f), defaultLfoFreq));
-        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoSync, 17 }, "LFO SYNC -- not yet implemented!", StringArray{"OFF","ON"}, defaultLfoSync));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameAtk, 18 }, "Attack (s)",    NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultAtk));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDcy, 19 }, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSus, 20 }, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f, 0.010f, 0.5f), defaultSus));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel, 21 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel, 22 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt, 23 }, "Noise Color/Filter (LPF,HPF)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameLfoFreq, 16 }, "LFO FREQ", NormalisableRange<float>(0.1f, 20.0f), defaultLfoFreq));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoRate, 17 }, "LFO RATE", MetricTime::timeChoices, defaultLfoRate));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoSync, 18 }, "LFO SYNC", StringArray{"OFF","ON"}, defaultLfoSync));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameAtk, 19 }, "Attack (s)",    NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultAtk));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDcy, 20 }, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSus, 21 }, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f), defaultSus));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel, 22 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel, 23 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt, 24 }, "Noise Color/Filter (LPF,HPF)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
         
 
 		return { params.begin(), params.end() };

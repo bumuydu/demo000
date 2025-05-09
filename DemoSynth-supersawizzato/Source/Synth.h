@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Oscillators.h"
 #include "Filters.h"
+#include "MyADSR.h"
 
 class MySynthSound : public SynthesiserSound
 {
@@ -130,17 +131,10 @@ public:
             trigger = false;
         }
         
-        // and process the noise
+        // process the noise
         noiseOsc.process(noiseBuffer, startSample, numSamples, noiseGain);
-        
-		// [Solitamente qui ci stanno cose tipo mixer degli oscillatori, filtro e saturazione]
-        
         // filtering the noise with its parameter before the main LPF
         noiseFilter.processBlock(noiseBuffer, numSamples);
-        
-		// La modulo in ampiezza con l'ADSR
-		ampAdsr.applyEnvelopeToBuffer(oscillatorBuffer, 0, numSamples);
-        ampAdsr.applyEnvelopeToBuffer(subBuffer, 0, numSamples);
 
 		// Volume proporzionale alla velocity
         for (int ch = 0; ch < oscillatorBuffer.getNumChannels(); ++ch)
@@ -164,6 +158,9 @@ public:
 //        ladderFilter.process(mixerContext);
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
         ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
+
+        // La modulo in ampiezza con l'ADSR
+        ampAdsr.applyEnvelopeToBuffer(mixerBuffer, 0, numSamples);
         
 		// copy the filtered buffer to the output buffer
         for (int ch = 0; ch < 2; ++ch)
@@ -225,6 +222,12 @@ public:
         modulation.setSize(2, samplesPerBlock);
 	}
     
+    
+    void updatePosition(AudioPlayHead::CurrentPositionInfo newPosition)
+    {
+        lfo.updatePosition(newPosition);
+    }
+    
     void updateFreqs()
     {
 //        if (isVoiceActive()) {
@@ -280,7 +283,7 @@ public:
         noiseGain = newValue;
     }
     
-	// Setters of JUCE's ADSR parameters -- MODIFY: Add slope param. A,D,R ^slope , S^(1/slope)
+	// Setters of ADSR parameters
 	void setAttack(const float newValue)
 	{
 		ampAdsrParams.attack = newValue;
@@ -295,7 +298,7 @@ public:
 
 	void setSustain(const float newValue)
 	{
-		ampAdsrParams.sustain = newValue;
+		ampAdsrParams.sustain = sqrt(newValue);
 		ampAdsr.setParameters(ampAdsrParams);
 	}
 
@@ -365,7 +368,12 @@ public:
         lfo.setFrequency(newValue);
     }
     
-    void setLfoSync(const int newValue)
+    void setLfoRate(const float newValue)
+    {
+        lfo.setRate(newValue);
+    }
+    
+    void setLfoSync(const bool newValue)
     {
         lfo.setSyncOn(newValue);
     }
@@ -397,7 +405,7 @@ private:
     int currentMidiNote = 60;
 
 	// Linear ADSR --> modify: will add a param (slope) which will make the lines nice and exponential curves
-	ADSR ampAdsr;
+	MyADSR ampAdsr;
 	ADSR::Parameters ampAdsrParams;
     
     // used for triggering the noise envelope
