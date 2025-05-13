@@ -102,37 +102,28 @@ public:
         sampleRate = sr;
         numOutputChannels = outputChannels;
         maxCutoffFrequency = sr * 0.499;
-        update();
+        setCutoff(cutoff);
+        update(cutoff);
     };
-//    void processWithEG(dsp::ProcessContextReplacing<float>& context, MyADSR& adsr, float lfoVal, int numSamples)
-//    {
-//        // working sample by sample was TOO CPU-heavy -- would completely become noise
-//        // again, using context instead of buffer or block
-//        
-//        float modulatedCutoff;
-//        
-//        float env = adsr.getNextSample();
-////        modulatedCutoff = cutoff + (env * egAmt * 5000.0f);           // 5000 Hz seems audible to control these parameters
-//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
-//
-//        // the cutoff must stay inside the audible range
-//        modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
-//        setCutoff(modulatedCutoff);
-//        process(context);
-//    }
     void process(AudioBuffer<float>& buffer, MyADSR& adsr, float lfoVal, int numSamples, int channel)
     {
         auto bufferData = buffer.getArrayOfWritePointers();
-//        const int endSample = startSample + numSamples;
-        float modulatedCutoff;
         
-//        process(context);
+        float env = adsr.getNextSample();
+//        float modulatedCutoff;
+//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
+        
+        float envModInSemitones = env * egAmt * maxEnvModSemitones;
+        float lfoModInSemitones = lfoVal * lfoAmt * maxLfoModSemitones;
+        float totalModInSemitones = envModInSemitones + lfoModInSemitones;
+        
+        float modulatedCutoff = cutoff * std::pow(2.0f, totalModInSemitones / 12.0f);
+        modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
+//        setCutoff(modulatedCutoff);
+        update(modulatedCutoff);
+
         for (int smp = 0; smp < numSamples ; ++smp)
         {
-            float env = adsr.getNextSample();
-            modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
-            modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
-            setCutoff(modulatedCutoff);
 //            for (int ch = 0; ch < 2; ++ch)
 //            {
 //                bufferData[ch][smp] = processSample(bufferData[ch][smp]);
@@ -159,7 +150,7 @@ public:
     void setCutoff(const double newCutoffFrequencyHz)
     {
         cutoff = jmin(newCutoffFrequencyHz, maxCutoffFrequency);
-        update();
+//        update();
     };
     void setResonance(float newResonance)
     {
@@ -175,9 +166,9 @@ public:
     }
 
 private:
-    void update()
+    void update(float modulatedCutoff)
     {
-        g = std::tan(juce::MathConstants<double>::pi * cutoff / sampleRate);
+        g = std::tan(juce::MathConstants<double>::pi * modulatedCutoff / sampleRate);
         g = saturationLUT(g);
     };
 
@@ -194,6 +185,8 @@ private:
     float* y = out;
     float lfoAmt = 0;
     float egAmt = 0;
+    const float maxEnvModSemitones = 12.0f;
+    const float maxLfoModSemitones = 24.0f;
     int numOutputChannels = 0;
 };
 
@@ -205,22 +198,6 @@ public:
         filterL.prepareToPlay(sr, 1);
         filterR.prepareToPlay(sr, 1);
     }
-//    void processWithEG(dsp::ProcessContextReplacing<float>& context, MyADSR& adsr, float lfoVal, int numSamples)
-//    {
-//        // working sample by sample was TOO CPU-heavy -- would completely become noise
-//        // again, using context instead of buffer or block
-//
-//        float modulatedCutoff;
-//
-//        float env = adsr.getNextSample();
-////        modulatedCutoff = cutoff + (env * egAmt * 5000.0f);           // 5000 Hz seems audible to control these parameters
-//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
-//
-//        // the cutoff must stay inside the audible range
-//        modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
-//        setCutoff(modulatedCutoff);
-//        process(context);
-//    }
     void process(AudioBuffer<float>& buffer, MyADSR& adsr, float lfoVal, int numSamples)
     {
         filterL.process(buffer, adsr, lfoVal, numSamples, 0);
@@ -246,7 +223,6 @@ public:
         filterL.setEnvAmt(newValue);
         filterR.setEnvAmt(newValue);
     }
-
 private:
     MoogFilter filterL;
     MoogFilter filterR;

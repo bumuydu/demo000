@@ -116,12 +116,12 @@ public:
         // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
         sawOscs.updateFreqs();
         
+//        sawOscs.processStereo(audioBlock, numSamples);
         // 2X OVERSAMPLING -- generate sounds at oversampled sample rate and decimate to original sample rate
         // process oversampled block with twice the number of samples
-//        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
-//        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
-//        oversampler->processSamplesDown (audioBlock);
-        sawOscs.processStereo(audioBlock, numSamples);
+        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
+        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
+        oversampler->processSamplesDown (audioBlock);
         
 //        sawOscs.process(oversmpBuffer, numSamples * oversamplingFactor);
 
@@ -240,9 +240,9 @@ public:
         specStereo.numChannels = 2;
         
         // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
-//        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, std::log2(oversamplingFactor), dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
-//        oversampler->initProcessing(samplesPerBlock);
-//        oversampler->reset();
+        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, std::log2(oversamplingFactor), dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
+        oversampler->initProcessing(samplesPerBlock);
+        oversampler->reset();
         
 //        antialiasingSpec.maximumBlockSize = samplesPerBlock * oversamplingFactor;
 //        antialiasingSpec.sampleRate = oversmpSR;
@@ -498,7 +498,7 @@ private:
 //    dsp::IIR::Filter<float> antialiasingFiltersR[kNumFilterStages];
 //    dsp::IIR::Coefficients<float>::Ptr lowpassCoeffs[kNumFilterStages];
 //    
-//    std::unique_ptr<dsp::Oversampling<float>> oversampler;
+    std::unique_ptr<dsp::Oversampling<float>> oversampler;
 
     SawOscillators sawOscs;
     NoiseOsc noiseOsc;

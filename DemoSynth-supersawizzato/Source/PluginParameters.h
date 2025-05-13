@@ -58,11 +58,9 @@ namespace Parameters
     static const int defaultLfoWf = 0;
     static const int defaultLfoSync = 0;
     static const int defaultLfoRate = 0;
-    static const int defaultOversampling = 2;
+    static const int defaultOversampling = 0;
     
-//    static const float defaultSub = -20.000f;   // I want these two off by default --> set to dbFloor
-//    static const float defaultNoise = -20.000f;
-
+//    static const float defaultSub = -48.000f;   // I want these two off by default --> set to dbFloor
 
 	static AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
 	{

@@ -54,7 +54,7 @@ public:
     
     float getNextSample()
     {
-        return adsr1.getNextSample() * adsr2.getNextSample();
+        return adsr1.getNextSample();
     }
     
 private:
