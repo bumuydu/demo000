@@ -53,14 +53,6 @@ public:
         updateFreqs();
     }
     
-//    void process(dsp::ProcessContextReplacing<float>& context)
-//    {
-//        for (int i = 0; i < activeOscs; ++i)
-//        {
-//            oscillators[i].process(context);
-//        }
-//    }
-    
     // the process method now with stereo width parameter that pans every oscillator
     void processStereo(dsp::AudioBlock<float>& block, int numSamples)
     {
@@ -102,6 +94,51 @@ public:
                 right[smp] += tmpR[smp] * rightGain;
             }
         }
+    }
+    
+    // BLIT USES GET NEXT AUDIO BLOCK
+    void process(AudioBuffer<float>& buffer, int numSamples)
+    {
+        // BLIT USES GET NEXT AUDIO BLOCK 
+//        auto* left = block.getChannelPointer(0);
+//        auto* right = block.getChannelPointer(1);
+//
+//        for (int i = 0; i < activeOscs; ++i)
+//        {
+//            tmpPanBuffer.clear();
+//            
+//            float oscPosition;
+//            if (activeOscs == 1)
+//                oscPosition = 0.5f; // don't pan if activeOscs = 1
+//            else
+//                oscPosition = static_cast<float>(i) / static_cast<float>(activeOscs - 1);
+//
+//            // since sawStereoWidth's range is [0.0f, 1.0f], we have to work around it to get the pan value right
+//            float pan = juce::jmap(sawStereoWidth, 0.5f, oscPosition);
+//            
+//            // equal power (constant power) panning law
+//            float leftGain  = std::cos(pan * juce::MathConstants<float>::halfPi);
+//            float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
+//
+//            // use tmpPanBuffer to process the oscillators
+//            // then add its contents to the main buffer applying the pan on buffers
+//                // check if this works, try using startSample as well as numSamples
+//                // if not, try using NaiveOscillator and process on the buffer rather than the audiocontext
+//            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer.getArrayOfWritePointers(), 2, numSamples);
+//            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
+//
+//            oscillators[i].process(tmpPanContext);
+//        
+//
+//            const float* tmpL = tmpPanBlock.getChannelPointer(0);
+//            const float* tmpR = tmpPanBlock.getChannelPointer(1);
+//
+//            for (int smp = 0; smp < numSamples; ++smp)
+//            {
+//                left[smp]  += tmpL[smp] * leftGain;
+//                right[smp] += tmpR[smp] * rightGain;
+//            }
+//        }
     }
     
     // methods to calculate the frequencies of each oscillator
@@ -351,6 +388,24 @@ public:
         }
         return getNextAudioSample();
     }
+    
+    float getNextAudioBlockFloat(AudioBuffer<float>& buffer, const int numSamples)
+    {
+        const int numCh = buffer.getNumChannels();
+        auto data = buffer.getArrayOfWritePointers();
+
+        // numSamples - 1 because I return the last sample
+        for (int smp = 0; smp < numSamples - 1; ++smp)
+        {
+            const double sampleValue = getNextAudioSample();
+
+            for (int ch = 0; ch < numCh; ++ch)
+            {
+                data[ch][smp] = sampleValue;
+            }
+        }
+        return getNextAudioSample();
+    }
 
     float getNextAudioSample()
     {
@@ -408,6 +463,12 @@ public:
         nominalPhase += syncPhaseIncrement;
         nominalPhase -= static_cast<int>(nominalPhase);
     }
+    
+    void resetPhase()
+    {
+        currentPhase = 0;
+    }
+
 
 private:
 

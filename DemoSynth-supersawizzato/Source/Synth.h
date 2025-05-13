@@ -39,6 +39,7 @@ public:
     void releaseResources()
     {
         noiseOsc.releaseResources();
+//        oversmpBuffer.setSize(0, 0);
         oscillatorBuffer.setSize(0, 0);
         subBuffer.setSize(0, 0);
         noiseBuffer.setSize(0, 0);
@@ -50,7 +51,8 @@ public:
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{
 		// Reset phase for each oscillator
-        subOscillator.reset();
+//        subOscillator.reset();
+        subOscillator.resetPhase();
         sawOscs.startNote(midiNoteNumber);
         
         // storing currentMidiNote for parameter changes related to the frequency
@@ -92,6 +94,7 @@ public:
 			return;
 
 		// Clearing buffers to be processed
+//        oversmpBuffer.clear(0, numSamples);
 		oscillatorBuffer.clear(0, numSamples);
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
@@ -99,9 +102,8 @@ public:
 
 		// Preparazione del ProcessContext per le classi DSP
 		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
-        
 		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
-		dsp::ProcessContextReplacing<float> context{ audioBlock };
+//		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
         auto subData = subBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> subAudioBlock{ subData, 1, (size_t)numSamples };
@@ -114,15 +116,49 @@ public:
         // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
         sawOscs.updateFreqs();
         
-        // 2X OVERSAMPLING -- generate sounds
-        // oversampling begins
-        auto oversampledBlock = oversampler->processSamplesUp (audioBlock);
+        // 2X OVERSAMPLING -- generate sounds at oversampled sample rate and decimate to original sample rate
         // process oversampled block with twice the number of samples
-        sawOscs.processStereo(oversampledBlock, numSamples * 2);
-        // decimate the samples back to the original sample rate
-        oversampler->processSamplesDown (audioBlock);
+//        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
+//        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
+//        oversampler->processSamplesDown (audioBlock);
+        sawOscs.processStereo(audioBlock, numSamples);
+        
+//        sawOscs.process(oversmpBuffer, numSamples * oversamplingFactor);
+
+//        for (int ch = 0; ch < 2; ++ch)
+//        {
+//            dsp::AudioBlock<float> chBlock = audioBlock.getSingleChannelBlock(ch);
+//            dsp::ProcessContextReplacing<float> chContext {chBlock};
+//            antialiasingFilters[ch].process(chContext);
+//        }
+//        // ANTIALIASING FILTER & DECIMATION
+//        for (int ch = 0; ch < 2; ++ch)
+//        {
+//            dsp::AudioBlock<float> chBlock = audioBlock.getSingleChannelBlock(ch);
+//            dsp::ProcessContextReplacing<float> chContext{chBlock};
+//            
+//            // Apply each filter stage in sequence
+//            auto* filters = (ch == 0) ? antialiasingFiltersL : antialiasingFiltersR;
+//            
+//            // Don't reset filters during audio processing - only initialize them once in prepareToPlay
+//            for (int i = 0; i < kNumFilterStages; ++i)
+//            {
+//                filters[i].process(chContext);
+//            }
+//        }
+//
+//        // Decimate the oversampled audio back to original sample rate
+//        for (int ch = 0; ch < 2; ++ch)
+//        {
+//            auto* out = oscillatorBuffer.getWritePointer(ch, startSample);
+//            auto* in = oversmpBuffer.getReadPointer(ch);
+//
+//            for (int i = 0; i < numSamples; ++i)
+//                out[i] = in[i * oversamplingFactor];
+//        }
                 
-        subOscillator.process(subContext);
+//        subOscillator.process(subContext);
+        subOscillator.getNextAudioBlockFloat(subBuffer, numSamples);
         
         // noise: trigger the ReleaseFilter envelope
         if(trigger)
@@ -157,7 +193,8 @@ public:
         // FILTERING - process the mixed buffer through a ladder filter
 //        ladderFilter.process(mixerContext);
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
-        ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
+//        ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
+        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, numSamples);
 
         // La modulo in ampiezza con l'ADSR
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, 0, numSamples);
@@ -181,7 +218,8 @@ public:
 	// Prepare to play of a single voice
 	void prepareToPlay(double sampleRate, int samplesPerBlock)
 	{
-		// Resetto gli ADSR
+        double oversmpSR = sampleRate * oversamplingFactor;
+        // Resetto gli ADSR
 		ampAdsr.setSampleRate(sampleRate);
 		ampAdsr.setParameters(ampAdsrParams);
         
@@ -193,8 +231,8 @@ public:
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
         // for the oversampled saw waves
-        stereoOversampledSpec.maximumBlockSize = samplesPerBlock * 2;
-        stereoOversampledSpec.sampleRate = sampleRate * 2;
+        stereoOversampledSpec.maximumBlockSize = samplesPerBlock * oversamplingFactor;
+        stereoOversampledSpec.sampleRate = oversmpSR;
         stereoOversampledSpec.numChannels = 2;
         // for the ladder filter
         specStereo.maximumBlockSize = samplesPerBlock;
@@ -202,19 +240,60 @@ public:
         specStereo.numChannels = 2;
         
         // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
-        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, 1, dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
-        oversampler->initProcessing(samplesPerBlock);
-        oversampler->reset();
+//        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, std::log2(oversamplingFactor), dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
+//        oversampler->initProcessing(samplesPerBlock);
+//        oversampler->reset();
+        
+//        antialiasingSpec.maximumBlockSize = samplesPerBlock * oversamplingFactor;
+//        antialiasingSpec.sampleRate = oversmpSR;
+//        antialiasingSpec.numChannels = 1;
+        
+//        *antiAliasingFilter.state = *juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(
+//                                        cutoffFrequency, stereoOversampledSpec.sampleRate, 4);
+//        auto designedCoefficientsArray = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(
+//                                                cutoffFrequency, stereoOversampledSpec, 4);
+
+//        antiAliasingFilter.prepare(stereoOversampledSpec);
+//        antiAliasingFilter.reset(); // Reset filter state
+        
+//        auto cutoffFrequency = sampleRate * 0.45;
+        // butterworth, cutoff at nyquist, oversampled SR, 4th order (Q) (higher order = steeper cutoff)
+//        auto coeffs = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(cutoffFrequency, oversmpSR, 4);
+
+//        lowpassCoeffs = coeffs[0];
+//
+//        for (int ch = 0; ch < 2; ++ch)
+//        {
+//            antialiasingFilters[ch].coefficients = lowpassCoeffs;
+////            antialiasingFilters[ch].prepare(antialiasingSpec);
+//            antialiasingFilters[ch].reset();
+//        }
+//        jassert(coeffs.size() >= kNumFilterStages);
+//        for (int i = 0; i < kNumFilterStages; ++i)
+//        {
+//            lowpassCoeffs[i] = coeffs[i];
+//            
+//            // Configure left channel filters
+//            antialiasingFiltersL[i].coefficients = lowpassCoeffs[i];
+//            antialiasingFiltersL[i].reset();
+//            
+//            // Configure right channel filters
+//            antialiasingFiltersR[i].coefficients = lowpassCoeffs[i];
+//            antialiasingFiltersR[i].reset();
+//        }
         
 		// initializing oscillators, noise generator and filters
         sawOscs.prepareToPlay(stereoOversampledSpec);
-        subOscillator.prepare(spec);
+//        subOscillator.prepare(spec);
+        subOscillator.prepareToPlay(sampleRate);
 
-        ladderFilter.prepare(specStereo);
+//        ladderFilter.prepare(specStereo);
+        moogFilter.prepareToPlay(sampleRate, 2);
 
         noiseOsc.prepareToPlay(spec);
         noiseFilter.prepareToPlay(spec);
 
+//        oversmpBuffer.setSize(2, samplesPerBlock * oversamplingFactor);
 		oscillatorBuffer.setSize(2, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
@@ -319,43 +398,50 @@ public:
         switch (newValue)
                 {
                 case 0: // sinusoidal
-                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+//                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+                        subOscillator.setWaveform(0);
                     break;
                 case 1: // square
-                    subOscillator = dsp::Oscillator<float> { [](float x)
-                        {
-                            return x > 0.0f ? 1.0f : -1.0f;
-                        } };
+//                    subOscillator = dsp::Oscillator<float> { [](float x)
+//                        {
+//                            return x > 0.0f ? 1.0f : -1.0f;
+//                        } };
+                        subOscillator.setWaveform(3);
                     break;
                 default:
-                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+//                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
+                        subOscillator.setWaveform(0);
                     // info: Sub Oscillator not selected correctly
                     //jassertfalse;
                     break;
                 }
-        subOscillator.prepare(spec);
+//        subOscillator.prepare(spec);
         updateFreqs();
     }
     
     void setCutoff(const float newValue)
     {
-        ladderFilter.setCutoff(newValue);
+//        ladderFilter.setCutoff(newValue);
+        moogFilter.setCutoff(newValue);
     }
     
     void setQuality(const float newValue)
     {
-        ladderFilter.setResonance(newValue);
+//        ladderFilter.setResonance(newValue);
+        moogFilter.setResonance(newValue);
     }
     
     void setFilterEnvAmt(const float newValue)
     {
-        ladderFilter.setEnvAmt(newValue);
+//        ladderFilter.setEnvAmt(newValue);
+        moogFilter.setEnvAmt(newValue);
 //        egAmt = newValue;
     }
     
     void setFilterLfoAmt(const float newValue)
     {
-        ladderFilter.setLfoAmt(newValue);
+//        ladderFilter.setLfoAmt(newValue);
+        moogFilter.setLfoAmt(newValue);
     }
     
     void setLfoWf(const int newValue)
@@ -388,18 +474,38 @@ public:
         noiseOsc.setRelease(newValue);
     }
     
+    void setOversampling(const int newValue)
+    {
+        // parameter is choice = values are index values 0 and 1
+        oversamplingFactor = (newValue + 1) * 2;
+//        prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+    }
+    
 private:
     dsp::ProcessSpec spec;
     dsp::ProcessSpec specStereo;
     dsp::ProcessSpec stereoOversampledSpec;
+    dsp::ProcessSpec antialiasingSpec;
     
-    std::unique_ptr<dsp::Oversampling<float>> oversampler;
+    int oversamplingFactor = 2;
+//    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> antiAliasingFilter;
+//    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>::Ptr> antiAliasingFilter;
+//    juce::dsp::IIR::Filter<float> antialiasingFilters[2];
+//    dsp::IIR::Coefficients<float>::Ptr lowpassCoeffs;
+//    
+//    static constexpr int kNumFilterStages = 2;
+//    dsp::IIR::Filter<float> antialiasingFiltersL[kNumFilterStages];
+//    dsp::IIR::Filter<float> antialiasingFiltersR[kNumFilterStages];
+//    dsp::IIR::Coefficients<float>::Ptr lowpassCoeffs[kNumFilterStages];
+//    
+//    std::unique_ptr<dsp::Oversampling<float>> oversampler;
 
     SawOscillators sawOscs;
     NoiseOsc noiseOsc;
     // Sub Oscillator
-    dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
+//    dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
     NaiveOscillator lfo;
+    NaiveOscillator subOscillator;
 
     // to track detune, register parameters on active note
     int currentMidiNote = 60;
@@ -426,12 +532,14 @@ private:
     //int subWaveform;
     
     // filters
-    LadderFilter ladderFilter;          // LPF for the whole synth
+//    LadderFilter ladderFilter;          // LPF for the whole synth
+    MoogFilters moogFilter;
     StereoFilter noiseFilter;           // filter for noise
     float egAmt = 0.0f;
     
     // buffers
 	AudioBuffer<float> oscillatorBuffer;
+//    AudioBuffer<float> oversmpBuffer;
     AudioBuffer<float> subBuffer;
     AudioBuffer<float> noiseBuffer;
     AudioBuffer<float> mixerBuffer;

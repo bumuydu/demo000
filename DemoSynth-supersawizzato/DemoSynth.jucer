@@ -8,6 +8,8 @@
               defines="JUCE_MODAL_LOOPS_PERMITTED = 1">
   <MAINGROUP id="c1e0SV" name="DemoSynth">
     <GROUP id="{9CD4BB01-4B89-AC5D-07D7-CCF964C7AD84}" name="Source">
+      <FILE id="N9jHlm" name="Matrix.cpp" compile="1" resource="0" file="Source/Matrix.cpp"/>
+      <FILE id="hmqm2P" name="Matrix.h" compile="0" resource="0" file="Source/Matrix.h"/>
       <FILE id="SIq2xM" name="Tempo.h" compile="0" resource="0" file="Source/Tempo.h"/>
       <FILE id="WQnMDG" name="Oscillators.h" compile="0" resource="0" file="Source/Oscillators.h"/>
       <FILE id="Wxdhp3" name="Filters.h" compile="0" resource="0" file="Source/Filters.h"/>

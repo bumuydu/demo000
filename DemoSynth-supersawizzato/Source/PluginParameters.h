@@ -29,6 +29,7 @@ namespace Parameters
     static const String nameLfoSync = "LFOSYNC";
     static const String nameNRel = "NOISEREL";
     static const String nameNFilt = "NFILT";
+    static const String nameOversampling = "OVERSMP";
 
     // CONSTANTS
     static const float dbFloor = -48.0f;
@@ -40,7 +41,7 @@ namespace Parameters
 	static const float defaultRel = 1.000f;
     static const float defaultSaw = 0.000f;
     static const float defaultStereoWidth = 0.000f;
-    static const float defaultFiltHz = 1000.0f;
+    static const float defaultFiltHz = 4000.0f;
     static const float defaultFiltQ = 0.000f;
     static const float defaultFiltEnv = 0.000f;
     static const float defaultFiltLfoAmt = 0.000f;
@@ -57,6 +58,7 @@ namespace Parameters
     static const int defaultLfoWf = 0;
     static const int defaultLfoSync = 0;
     static const int defaultLfoRate = 0;
+    static const int defaultOversampling = 2;
     
 //    static const float defaultSub = -20.000f;   // I want these two off by default --> set to dbFloor
 //    static const float defaultNoise = -20.000f;
@@ -90,6 +92,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel, 22 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel, 23 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt, 24 }, "Noise Color/Filter (LPF,HPF)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameOversampling, 25 }, "Oversampling", StringArray{"2X","4X"}, defaultOversampling));
         
 
 		return { params.begin(), params.end() };
