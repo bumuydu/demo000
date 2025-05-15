@@ -53,6 +53,7 @@ namespace Parameters
     static const int defaultSawNum = 5;
     static const int defaultDetune = 15;
     static const int defaultPhase = 180;
+    static const int defaultWf = 0;
     static const int defaultSubReg = 0;
     static const int defaultSubWf = 0;
     static const int defaultLfoWf = 0;

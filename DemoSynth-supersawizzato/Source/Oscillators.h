@@ -1,8 +1,54 @@
 #pragma once
+#include "Blit.h"
+#include "PluginParameters.h"
 #include "Filters.h"
 #include "Tempo.h"
 
 #define MAX_SAW_OSCS 16
+
+class MoogOsc
+{
+public:
+    MoogOsc() {}
+    ~MoogOsc() {}
+    void setWaveForm(float newValue) { waveform = roundToInt(newValue);  }
+
+    void prepareToPlay(double sr)
+    {
+        sampleRate = sr;
+        blit.prepareToPlay(sr);
+    }
+    
+    void getNextAudioBlock(AudioBuffer<float>& outputBuffer,
+                           AudioBuffer<double>& frequencyBuffer,
+                           int startSample, int numSamples)
+    {
+        int endSample = startSample + numSamples;
+        for (int k = startSample; k < endSample; ++k)
+        {
+            double frequencySample = frequencyBuffer.getSample(0, k);
+            const float sampleValue = getNextAudioSample(frequencySample);
+            outputBuffer.addSample(0, k, sampleValue);
+        }
+    }
+    
+    float getNextAudioSample(double frequencySample)
+    {
+        sampleValue = blit.updateWaveform(frequencySample, waveform);
+        return sampleValue;
+    }
+
+    void clearAccumulator()
+    {
+        blit.clearAccumulator();
+    }
+
+private:
+    Blit blit;
+    double sampleRate = 44100.0;
+    float sampleValue = 0.0f;
+    int waveform = Parameters::defaultWf;
+};
 
 class SawOscillators
 {
@@ -13,7 +59,6 @@ public:
     SawOscillators(int defaultSawNum, int defaultDetune, float defaultPhase, float defaultStereoWidth)
     : activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth)
     {
-        initializeOscillators();
     };
     
     void prepareToPlay(const dsp::ProcessSpec specInput)
@@ -24,44 +69,42 @@ public:
         // Inizializzo l'oscillatore
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
         {
-            oscillators[i].prepare(spec);
+            blitsOscs[i].prepareToPlay(specInput.sampleRate);
+            frequencyBuffers[i].setSize(1, spec.maximumBlockSize);
         }
         
-        // without this it wouldn't prepare the synth properly
-        setActiveOscs(5);
+        setActiveOscs(Parameters::defaultSawNum);
     }
     
-    void initializeOscillators()
+    void releaseResources()
     {
+        tmpPanBuffer.setSize(0, 0);
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
         {
-            oscillators[i].initialise([](float x) { return x / MathConstants<float>::pi; });
-            oscillators[i].setFrequency(0, true);
+            frequencyBuffers[i].setSize(0, 0);
         }
+        
     }
-    
+
     void startNote(int midiNoteNumber)
     {
-        // Reset phase for each oscillator
-        for (int i = 0; i < MAX_SAW_OSCS; ++i)
-        {
-            oscillators[i].reset();
-        }
+        // modify: can add phase control here
         
         // storing currentMidiNote for parameter changes related to the frequency
         currentMidiNote = midiNoteNumber;
-        updateFreqs();
+//        updateFreqs();
     }
     
     // the process method now with stereo width parameter that pans every oscillator
-    void processStereo(dsp::AudioBlock<float>& block, int numSamples)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, int startSample, int numSamples)
     {
-        auto* left = block.getChannelPointer(0);
-        auto* right = block.getChannelPointer(1);
-
+        auto* left = buffer.getWritePointer(0);
+        auto* right = buffer.getWritePointer(1);
+        
         for (int i = 0; i < activeOscs; ++i)
         {
             tmpPanBuffer.clear();
+            setSawFreqs(frequencyBuffer, startSample, numSamples); // did not work
             
             float oscPosition;
             if (activeOscs == 1)
@@ -78,127 +121,86 @@ public:
 
             // use tmpPanBuffer to process the oscillators
             // then add its contents to the main buffer applying the pan on buffers
-                // check if this works, try using startSample as well as numSamples
-                // if not, try using NaiveOscillator and process on the buffer rather than the audiocontext
-            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer.getArrayOfWritePointers(), 2, numSamples);
-            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
-
-            oscillators[i].process(tmpPanContext);
-
-            const float* tmpL = tmpPanBlock.getChannelPointer(0);
-            const float* tmpR = tmpPanBlock.getChannelPointer(1);
-
+            blitsOscs[i].getNextAudioBlock(tmpPanBuffer, frequencyBuffers[i], startSample, numSamples);
+        
+            const float* tmp = tmpPanBuffer.getReadPointer(0);
+            
             for (int smp = 0; smp < numSamples; ++smp)
             {
-                left[smp]  += tmpL[smp] * leftGain;
-                right[smp] += tmpR[smp] * rightGain;
+                left[smp]  += tmp[smp] * leftGain;
+                right[smp] += tmp[smp] * rightGain;
             }
         }
     }
     
-    // BLIT USES GET NEXT AUDIO BLOCK
-    void process(AudioBuffer<float>& buffer, int numSamples)
-    {
-        // BLIT USES GET NEXT AUDIO BLOCK 
-//        auto* left = block.getChannelPointer(0);
-//        auto* right = block.getChannelPointer(1);
-//
-//        for (int i = 0; i < activeOscs; ++i)
-//        {
-//            tmpPanBuffer.clear();
-//            
-//            float oscPosition;
-//            if (activeOscs == 1)
-//                oscPosition = 0.5f; // don't pan if activeOscs = 1
-//            else
-//                oscPosition = static_cast<float>(i) / static_cast<float>(activeOscs - 1);
-//
-//            // since sawStereoWidth's range is [0.0f, 1.0f], we have to work around it to get the pan value right
-//            float pan = juce::jmap(sawStereoWidth, 0.5f, oscPosition);
-//            
-//            // equal power (constant power) panning law
-//            float leftGain  = std::cos(pan * juce::MathConstants<float>::halfPi);
-//            float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
-//
-//            // use tmpPanBuffer to process the oscillators
-//            // then add its contents to the main buffer applying the pan on buffers
-//                // check if this works, try using startSample as well as numSamples
-//                // if not, try using NaiveOscillator and process on the buffer rather than the audiocontext
-//            dsp::AudioBlock<float> tmpPanBlock(tmpPanBuffer.getArrayOfWritePointers(), 2, numSamples);
-//            dsp::ProcessContextReplacing<float> tmpPanContext(tmpPanBlock);
-//
-//            oscillators[i].process(tmpPanContext);
-//        
-//
-//            const float* tmpL = tmpPanBlock.getChannelPointer(0);
-//            const float* tmpR = tmpPanBlock.getChannelPointer(1);
-//
-//            for (int smp = 0; smp < numSamples; ++smp)
-//            {
-//                left[smp]  += tmpL[smp] * leftGain;
-//                right[smp] += tmpR[smp] * rightGain;
-//            }
-//        }
-    }
-    
     // methods to calculate the frequencies of each oscillator
     
-    void updateFreqs()
+    // depending on the number of saws and detune value
+    // the frequencies of the rest of the oscillators have to be calculated
+    // 1. if numSaw odd --> then base is unchanged and the rest will be as before
+    //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
+    // 2. modify: detune logic will change. right now the detune amount becomes larger for all oscillators after the 3rd
+    // but it will be the max detune amount and the rest will be contained inside that maximum detune amount
+    void setSawFreqs(AudioBuffer<double>& freqBuffer, int startSample, int numSamples)
     {
-        float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister + 1);
-        setSawFreqs(baseFreq);
-    }
-    
-    void setSawFreqs(double baseFreq)
-    {
-        // depending on the number of saws and detune value
-        // the frequencies of the rest of the oscillators have to be calculated
-        // 1. if numSaw odd --> then base is unchanged and the rest will be as before
-        //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
-        // 2.
-        
+        int endSample = startSample + numSamples;
         if (activeOscs % 2 != 0)
         {   // odd
-            oscillators[0].setFrequency(baseFreq, true);
+//            oscillators[0].setFrequency(baseFreq, true);
+//            blitsOscs[0].setFrequency(baseFreq);
+            // for main osc do nothing
             
             if (activeOscs > 1)
             {
                 for (int i = 1; i < activeOscs; i+=2)
                 {
+                    frequencyBuffers[i].clear();
+                    frequencyBuffers[i+1].clear();
+                    
                     // 1,2,3... for each pair
                     int pairIndex = (i + 1) / 2;
                     double detuneAmount = pow(cent, pairIndex);
                     
-                    oscillators[i].setFrequency(baseFreq * detuneAmount, true);
-                    oscillators[i+1].setFrequency(baseFreq / detuneAmount, true);
+                    for (int j = startSample; j < endSample; ++j) {
+                        auto tmp = freqBuffer.getSample(0, j);
+                        frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
+                        frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
+                    }
                 }
             }
         }
         else
         {   // even
             for (int i = 0; i < activeOscs; i+=2) {
+                frequencyBuffers[i].clear();
+                frequencyBuffers[i+1].clear();
+                
                 int pairIndex = (i + 1) / 2;
                 double detuneAmount = pow(cent, pairIndex);
-                oscillators[i].setFrequency(baseFreq * detuneAmount, true);
-                oscillators[i+1].setFrequency(baseFreq / detuneAmount, true);
+
+                for (int j = startSample; j < endSample; ++j) {
+                    auto tmp = freqBuffer.getSample(0, j);
+                    frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
+                    frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
+                }
             }
         }
     }
     
-    // setters & getters
+    // SETTERS, GETTERS AND MISC.
     
     void setRegister(const int newValue)
     {
         // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
         sawRegister = newValue - 2;
-        updateFreqs();
+//        updateFreqs();
     }
     
     void setDetune(const float newValue)
     {
         sawDetune = newValue;
         cent = pow(root, newValue);
-        updateFreqs();
+//        updateFreqs();
     }
     
     void setStereoWidth(const float newValue)
@@ -221,13 +223,19 @@ public:
         return activeOscs;
     }
     
+    double nn2hz(double nn)
+    {
+        return pow(2.0, (nn - 69.0) / 12.0) * 440.0;
+    }
+    
 private:
     dsp::ProcessSpec spec;
 
-    dsp::Oscillator<float> oscillators[MAX_SAW_OSCS];
+    MoogOsc blitsOscs[MAX_SAW_OSCS];
     int activeOscs; // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
     
     AudioBuffer<float> tmpPanBuffer;
+    AudioBuffer<double> frequencyBuffers[MAX_SAW_OSCS];
     
     // osc params
     int sawRegister = -2;
@@ -252,11 +260,6 @@ class NoiseOsc
 public:
     NoiseOsc(){}
     ~NoiseOsc(){}
-    
-//    NoiseOsc()
-//    :
-//    {
-//    };
     
     void releaseResources()
     {

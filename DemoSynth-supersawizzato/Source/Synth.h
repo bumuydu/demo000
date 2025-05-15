@@ -22,7 +22,7 @@ class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
 	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 20.0, int defaultLfoWf = 0 /*, int defaultSubWf = 0*/)
-    : sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
+    : /*sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth)*/sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
 	{
 	};
 	
@@ -38,13 +38,15 @@ public:
     
     void releaseResources()
     {
+        sawOscs.releaseResources();
         noiseOsc.releaseResources();
-//        oversmpBuffer.setSize(0, 0);
+        oversmpBuffer.setSize(0, 0);
         oscillatorBuffer.setSize(0, 0);
         subBuffer.setSize(0, 0);
         noiseBuffer.setSize(0, 0);
         mixerBuffer.setSize(0, 0);
         modulation.setSize(0, 0);
+        frequencyBuffer.setSize(0, 0);
     }
 
 	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
@@ -56,6 +58,7 @@ public:
         sawOscs.startNote(midiNoteNumber);
         
         // storing currentMidiNote for parameter changes related to the frequency
+        noteNumber.setTargetValue(midiNoteNumber);
         currentMidiNote = midiNoteNumber;
         updateFreqs();  // this is mainly used so the sub can calculate its freq
 
@@ -94,7 +97,7 @@ public:
 			return;
 
 		// Clearing buffers to be processed
-//        oversmpBuffer.clear(0, numSamples);
+        oversmpBuffer.clear(0, numSamples);
 		oscillatorBuffer.clear(0, numSamples);
         subBuffer.clear(0, numSamples);
         noiseBuffer.clear(0, numSamples);
@@ -114,16 +117,17 @@ public:
         dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
 
         // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
-        sawOscs.updateFreqs();
+        frequencyModulation(startSample, numSamples);
         
-//        sawOscs.processStereo(audioBlock, numSamples);
         // 2X OVERSAMPLING -- generate sounds at oversampled sample rate and decimate to original sample rate
         // process oversampled block with twice the number of samples
-        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
-        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
-        oversampler->processSamplesDown (audioBlock);
         
-//        sawOscs.process(oversmpBuffer, numSamples * oversamplingFactor);
+//        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
+//        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
+//        oversampler->processSamplesDown (audioBlock);
+        
+        sawOscs.process(oscillatorBuffer, frequencyBuffer, startSample, numSamples);
+//        sawOscs.process(oversmpBuffer, startSample, numSamples * oversamplingFactor);
 
 //        for (int ch = 0; ch < 2; ++ch)
 //        {
@@ -239,6 +243,9 @@ public:
         specStereo.sampleRate = sampleRate;
         specStereo.numChannels = 2;
         
+        noteNumber.reset(sampleRate, 0.001f);
+        frequencyBuffer.setSize(1, samplesPerBlock);
+        
         // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
         oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, std::log2(oversamplingFactor), dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
         oversampler->initProcessing(samplesPerBlock);
@@ -283,7 +290,9 @@ public:
 //        }
         
 		// initializing oscillators, noise generator and filters
-        sawOscs.prepareToPlay(stereoOversampledSpec);
+//        sawOscs.prepareToPlay(stereoOversampledSpec);
+        sawOscs.prepareToPlay(specStereo);
+        
 //        subOscillator.prepare(spec);
         subOscillator.prepareToPlay(sampleRate);
 
@@ -293,14 +302,13 @@ public:
         noiseOsc.prepareToPlay(spec);
         noiseFilter.prepareToPlay(spec);
 
-//        oversmpBuffer.setSize(2, samplesPerBlock * oversamplingFactor);
+        oversmpBuffer.setSize(2, samplesPerBlock * oversamplingFactor);
 		oscillatorBuffer.setSize(2, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
         mixerBuffer.setSize(2, samplesPerBlock);
         modulation.setSize(2, samplesPerBlock);
 	}
-    
     
     void updatePosition(AudioPlayHead::CurrentPositionInfo newPosition)
     {
@@ -310,12 +318,28 @@ public:
     void updateFreqs()
     {
 //        if (isVoiceActive()) {
-            float baseFreq = MidiMessage::getMidiNoteInHertz(currentMidiNote) * std::pow(2, sawRegister + 1);
-            sawOscs.setSawFreqs(baseFreq);
+            double baseFreq = nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1);
+//            sawOscs.setSawFreqs(baseFreq);
             
-            float subFreq = baseFreq / std::pow(2, subRegister + 3);
+            double subFreq = baseFreq / std::pow(2, subRegister + 3);
             subOscillator.setFrequency(subFreq);
 //        }
+    }
+    
+    double nn2hz(double nn)
+    {
+        return pow(2.0, (nn - 69.0) / 12.0) * 440.0;
+    }
+    
+    void frequencyModulation(int startSample, int numSamples) {
+        auto fmOsc1Data = frequencyBuffer.getArrayOfWritePointers();
+
+        for (int i = startSample; i < (startSample + numSamples); ++i) {
+            // Setting standard value for the filter and the oscillator frequency
+            const double currentNoteNumber = noteNumber.getNextValue();
+            fmOsc1Data[0][i] = currentNoteNumber;
+            fmOsc1Data[0][i] = nn2hz(fmOsc1Data[0][i]) * std::pow(2, sawRegister - 1);
+        }
     }
 	
     // Parameter setters
@@ -509,6 +533,8 @@ private:
 
     // to track detune, register parameters on active note
     int currentMidiNote = 60;
+    SmoothedValue<double, ValueSmoothingTypes::Linear> noteNumber;
+    AudioBuffer<double> frequencyBuffer;
 
 	// Linear ADSR --> modify: will add a param (slope) which will make the lines nice and exponential curves
 	MyADSR ampAdsr;
@@ -539,7 +565,7 @@ private:
     
     // buffers
 	AudioBuffer<float> oscillatorBuffer;
-//    AudioBuffer<float> oversmpBuffer;
+    AudioBuffer<float> oversmpBuffer;
     AudioBuffer<float> subBuffer;
     AudioBuffer<float> noiseBuffer;
     AudioBuffer<float> mixerBuffer;
