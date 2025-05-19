@@ -11,12 +11,11 @@ class MoogOsc
 public:
     MoogOsc() {}
     ~MoogOsc() {}
-    void setWaveForm(float newValue) { waveform = roundToInt(newValue);  }
 
-    void prepareToPlay(double sr)
+    void prepareToPlay(const dsp::ProcessSpec spec1)
     {
-        sampleRate = sr;
-        blit.prepareToPlay(sr);
+        sampleRate = spec1.sampleRate;
+        blit.prepareToPlay(spec1);
     }
     
     void getNextAudioBlock(AudioBuffer<float>& outputBuffer,
@@ -37,6 +36,16 @@ public:
         sampleValue = blit.updateWaveform(frequencySample, waveform);
         return sampleValue;
     }
+    
+    void setWaveform(float newValue)
+    {
+        waveform = roundToInt(newValue);
+    }
+    
+    void setOscPhase(const int newValue, const double frequency)
+    {
+        blit.setBlitPhase(newValue, frequency);
+    }
 
     void clearAccumulator()
     {
@@ -47,7 +56,7 @@ private:
     Blit blit;
     double sampleRate = 44100.0;
     float sampleValue = 0.0f;
-    int waveform = Parameters::defaultWf;
+    int waveform = Parameters::defaultMainWf;
 };
 
 class SawOscillators
@@ -56,8 +65,8 @@ public:
     SawOscillators(){}
     ~SawOscillators(){}
     
-    SawOscillators(int defaultSawNum, int defaultDetune, float defaultPhase, float defaultStereoWidth)
-    : activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawPhase(defaultPhase), sawStereoWidth(defaultStereoWidth)
+    SawOscillators(int defaultSawNum, int defaultDetune, float defaultStereoWidth)
+    : activeOscs(defaultSawNum),  sawDetune(defaultDetune), sawStereoWidth(defaultStereoWidth)
     {
     };
     
@@ -69,7 +78,7 @@ public:
         // Inizializzo l'oscillatore
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
         {
-            blitsOscs[i].prepareToPlay(specInput.sampleRate);
+            blitsOscs[i].prepareToPlay(specInput);
             frequencyBuffers[i].setSize(1, spec.maximumBlockSize);
         }
         
@@ -86,17 +95,20 @@ public:
         
     }
 
-    void startNote(int midiNoteNumber)
+//    void startNote(int midiNoteNumber)
+    void startNote(const double freq)
     {
-        // modify: can add phase control here
+        // if phase resetting is ON then set it to the selected value by the user
+        if(phaseResetting)
+            setSawsPhase(sawPhase, freq);
         
         // storing currentMidiNote for parameter changes related to the frequency
-        currentMidiNote = midiNoteNumber;
+//        currentMidiNote = midiNoteNumber;
 //        updateFreqs();
     }
     
     // the process method now with stereo width parameter that pans every oscillator
-    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, int startSample, int numSamples)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, const int startSample, const int numSamples)
     {
         auto* left = buffer.getWritePointer(0);
         auto* right = buffer.getWritePointer(1);
@@ -104,7 +116,7 @@ public:
         for (int i = 0; i < activeOscs; ++i)
         {
             tmpPanBuffer.clear();
-            setSawFreqs(frequencyBuffer, startSample, numSamples); // did not work
+            setSawFreqs(frequencyBuffer, startSample, numSamples);
             
             float oscPosition;
             if (activeOscs == 1)
@@ -141,7 +153,7 @@ public:
     //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
     // 2. modify: detune logic will change. right now the detune amount becomes larger for all oscillators after the 3rd
     // but it will be the max detune amount and the rest will be contained inside that maximum detune amount
-    void setSawFreqs(AudioBuffer<double>& freqBuffer, int startSample, int numSamples)
+    void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSample, const int numSamples)
     {
         int endSample = startSample + numSamples;
         if (activeOscs % 2 != 0)
@@ -154,8 +166,8 @@ public:
             {
                 for (int i = 1; i < activeOscs; i+=2)
                 {
-                    frequencyBuffers[i].clear();
-                    frequencyBuffers[i+1].clear();
+//                    frequencyBuffers[i].clear();
+//                    frequencyBuffers[i+1].clear();
                     
                     // 1,2,3... for each pair
                     int pairIndex = (i + 1) / 2;
@@ -172,8 +184,8 @@ public:
         else
         {   // even
             for (int i = 0; i < activeOscs; i+=2) {
-                frequencyBuffers[i].clear();
-                frequencyBuffers[i+1].clear();
+//                frequencyBuffers[i].clear();
+//                frequencyBuffers[i+1].clear();
                 
                 int pairIndex = (i + 1) / 2;
                 double detuneAmount = pow(cent, pairIndex);
@@ -188,6 +200,14 @@ public:
     }
     
     // SETTERS, GETTERS AND MISC.
+    
+    void setWf(const int newValue)
+    {
+        for (int i = 0; i < MAX_SAW_OSCS; ++i)
+        {
+            blitsOscs[i].setWaveform(newValue);
+        }
+    }
     
     void setRegister(const int newValue)
     {
@@ -208,7 +228,32 @@ public:
         sawStereoWidth = newValue;
     }
     
-    void setPhase(const float newValue)
+    void setPhaseResetting(const bool newValue)
+    {
+        // if resetting is on, the phase value will be used on every startNote
+        phaseResetting = newValue;
+    }
+    
+    void setSawsPhase(const int phaseDegree, const double frequency)
+    {
+        sawPhase = phaseDegree;
+        if (phaseDegree == 0) {
+            for (int i = 0; i < MAX_SAW_OSCS; ++i)
+            {
+                blitsOscs[i].clearAccumulator();
+            }
+        }
+        else
+        {
+            for (int i = 0; i < MAX_SAW_OSCS; ++i)
+            {
+                blitsOscs[i].clearAccumulator();
+                blitsOscs[i].setOscPhase(phaseDegree, frequency);
+            }
+        }
+    }
+    
+    void setPhaseDegree(const int newValue)
     {
         sawPhase = newValue;
     }
@@ -223,11 +268,6 @@ public:
         return activeOscs;
     }
     
-    double nn2hz(double nn)
-    {
-        return pow(2.0, (nn - 69.0) / 12.0) * 440.0;
-    }
-    
 private:
     dsp::ProcessSpec spec;
 
@@ -240,7 +280,8 @@ private:
     // osc params
     int sawRegister = -2;
     int sawDetune;
-    int sawPhase;
+    bool phaseResetting = false;
+    int sawPhase = 0;
     float sawStereoWidth;
     
     // calculating cents to detune
@@ -249,7 +290,7 @@ private:
     // raise to the number of cents (15 sounds nice)
     double cent = pow(root, 15);
     // to track the parameters of detune & register on active note
-    int currentMidiNote = 60;
+//    int currentMidiNote = 60;
     
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SawOscillators)

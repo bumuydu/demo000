@@ -22,7 +22,7 @@ class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
 	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 20.0, int defaultLfoWf = 0 /*, int defaultSubWf = 0*/)
-    : /*sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth)*/sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
+    : /*sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth)*/sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
 	{
 	};
 	
@@ -53,9 +53,8 @@ public:
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{
 		// Reset phase for each oscillator
-//        subOscillator.reset();
         subOscillator.resetPhase();
-        sawOscs.startNote(midiNoteNumber);
+        sawOscs.startNote(nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1));
         
         // storing currentMidiNote for parameter changes related to the frequency
         noteNumber.setTargetValue(midiNoteNumber);
@@ -92,6 +91,9 @@ public:
         // calculates the audio block and returns the last sample
         float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
         
+        // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
+        frequencyModulation(0, numSamples);
+        
 		// Se la voce non è attiva ci si può fermare qui
 		if (!isVoiceActive())
 			return;
@@ -104,8 +106,8 @@ public:
         mixerBuffer.clear(0, numSamples);
 
 		// Preparazione del ProcessContext per le classi DSP
-		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
-		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
+//		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
+//		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
 //		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
         auto subData = subBuffer.getArrayOfWritePointers();
@@ -115,9 +117,6 @@ public:
         auto mixerData = mixerBuffer.getArrayOfWritePointers();
         dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
-
-        // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
-        frequencyModulation(startSample, numSamples);
         
         // 2X OVERSAMPLING -- generate sounds at oversampled sample rate and decimate to original sample rate
         // process oversampled block with twice the number of samples
@@ -126,7 +125,7 @@ public:
 //        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
 //        oversampler->processSamplesDown (audioBlock);
         
-        sawOscs.process(oscillatorBuffer, frequencyBuffer, startSample, numSamples);
+        sawOscs.process(oscillatorBuffer, frequencyBuffer, 0, numSamples);
 //        sawOscs.process(oversmpBuffer, startSample, numSamples * oversamplingFactor);
 
 //        for (int ch = 0; ch < 2; ++ch)
@@ -198,7 +197,7 @@ public:
 //        ladderFilter.process(mixerContext);
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
 //        ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
-        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, numSamples);
+        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, 0, numSamples);
 
         // La modulo in ampiezza con l'ADSR
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, 0, numSamples);
@@ -337,12 +336,19 @@ public:
         for (int i = startSample; i < (startSample + numSamples); ++i) {
             // Setting standard value for the filter and the oscillator frequency
             const double currentNoteNumber = noteNumber.getNextValue();
-            fmOsc1Data[0][i] = currentNoteNumber;
-            fmOsc1Data[0][i] = nn2hz(fmOsc1Data[0][i]) * std::pow(2, sawRegister - 1);
+//            fmOsc1Data[0][i] = currentNoteNumber;
+//            fmOsc1Data[0][i] = nn2hz(fmOsc1Data[0][i]) * std::pow(2, sawRegister - 1);
+            fmOsc1Data[0][i] = nn2hz(currentNoteNumber) * std::pow(2, sawRegister - 1);
         }
     }
 	
     // Parameter setters
+    
+    void setMainWf(const int newValue)
+    {
+        sawOscs.setWf(newValue);
+    }
+    
     void setSawRegister(const int newValue)
     {
         // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
@@ -366,9 +372,14 @@ public:
         sawOscs.setStereoWidth(newValue);
     }
     
-    void setSawPhase(const float newValue)
+    void setSawPhase(const int newValue)
     {
-        sawOscs.setPhase(newValue);
+        sawOscs.setPhaseDegree(newValue);
+    }
+    
+    void setPhaseResetting(const bool newValue)
+    {
+        sawOscs.setPhaseResetting(newValue);
     }
     
     void setSawGain(const float newValue)

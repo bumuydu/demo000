@@ -114,6 +114,9 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
         {
             // OSC
+            if (paramID == Parameters::nameMainWf)
+                voice->setMainWf(newValue);
+            
             if (paramID == Parameters::nameSawReg)
                 voice->setSawRegister(newValue);
             
@@ -127,6 +130,9 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
                 voice->setSawStereoWidth(newValue);
             
             if (paramID == Parameters::namePhase)
+                voice->setPhaseResetting(newValue);
+            
+            if (paramID == Parameters::namePhaseDegree)
                 voice->setSawPhase(newValue);
             
             // OSC levels

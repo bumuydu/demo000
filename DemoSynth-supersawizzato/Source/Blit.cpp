@@ -10,16 +10,12 @@
 
 #include "Blit.h"
 
-void Blit::prepareToPlay(double sr) {
-    this->sr = sr;
+void Blit::prepareToPlay(const dsp::ProcessSpec spec) {
+    this->sr = spec.sampleRate;
     sp = 1.0 / sr;
+    maxBlock = spec.maximumBlockSize;
 
     alpha = exp(-(LEAKY_INTEGRATOR_BASE_FREQUENCY / sr) * MathConstants<double>::twoPi);
-
-    leakMod   = alpha - exp(-(LEAKY_INTEGRATOR_MOD_FREQUENCY/sr) * MathConstants<double>::twoPi);
-    leakNoise = alpha - exp(-(LEAKY_INTEGRATOR_NOISE_FREQUENCY/sr) * MathConstants<double>::twoPi);
-    leakTrNoi = alpha - exp(-(LEAKY_INTEGRATOR_TRI_NOISE_FREQUENCY/sr) * MathConstants<double>::twoPi);
-    leakTrMod = alpha - exp(-(LEAKY_INTEGRATOR_TRI_MOD_FREQUENCY / sr) * MathConstants<double>::twoPi);
 
     populateBlitTab();
 }
@@ -50,22 +46,36 @@ void Blit::populateBlitTab()
     }
 }
 
-void Blit::updateLeakiness(double osc3LfoRate, double modAmount, bool isOscModOn, bool isNoiseModOn, double modMix) 
+void Blit::setBlitPhase(const int phaseDegree, const double frequency)
 {
-    // V3
-    const double noiseAmt = pow(modMix, 1.5) * isNoiseModOn;
-    leakiness    = leakNoise * noiseAmt;
-    leakinessTri = leakTrNoi * noiseAmt;
+    double periodInSamples = sr / frequency;
 
-    const double oshModFactor = jmin(osc3LfoRate * 0.004, 1.0); // * 0.004 = / 250
-    leakiness    += oshModFactor * oshModFactor * leakMod;
-    leakinessTri += oshModFactor * oshModFactor * leakTrMod;
+    double phaseOffset = phaseDegree / 360.0;
 
-    const double totModAmount = modAmount * isOscModOn;
-    leakiness    *= totModAmount;
-    leakinessTri *= totModAmount;
+    // sample offset corresponding to the phase
+    // a cycle conceptually starts with sampleCont = 0.
+    this->sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
+//    sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
 
-    // Actual leakyness = alpha - leakiness (or alpha - leakinessTri for tri wave)
+    // check that sampleCont is kept in a single cycle
+    int roundedPeriod = static_cast<int>(round(periodInSamples));
+    if (roundedPeriod > 0)
+    {
+        this->sampleCont %= roundedPeriod;
+//        sampleCont %= roundedPeriod;
+    }
+    else
+    {
+        this->sampleCont = 0;
+//        sampleCont = 0;
+    }
+//    
+//    // reset sub-sample offsets
+//    this->subOff1 = 0.0;
+//    this->subOff2 = 0.0;
+//
+//    // reset 'passedNeg' for square waves
+//    this->passedNeg = false;
 }
 
 void Blit::clearAccumulator() {
@@ -73,6 +83,17 @@ void Blit::clearAccumulator() {
     accSaw = 0.0;
     accSquare = 0.0;
     sampleCont = 0;
+    
+//    for (int i = 0; i < maxBlock; ++i)
+//    {
+//        pBlit[i] = 0.0;
+//        nBlit[i] = 0.0;
+//    }
+//    
+//    index = 0;
+//    subOff1 = 0.0;
+//    subOff2 = 0.0;
+//    passedNeg = false;
 }
 
 float Blit::updateWaveform(double f, int waveform)
@@ -198,8 +219,6 @@ float Blit::updateNarrowSquare(double f) {
     accSquare = accSquare * (alpha - leakiness) + pBlit[index] + nBlit[index];
     return accSquare - 0.01522; // - offset;;
 }
-
-
 
 void Blit::getPositiveBlit() {
     int blitIndex = 0;

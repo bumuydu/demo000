@@ -105,11 +105,10 @@ public:
         setCutoff(cutoff);
         update(cutoff);
     };
-    void process(AudioBuffer<float>& buffer, MyADSR& adsr, float lfoVal, int numSamples, int channel)
+    void process(AudioBuffer<float>& buffer, float env, float lfoVal, int startSample, int numSamples, int channel)
     {
         auto bufferData = buffer.getArrayOfWritePointers();
         
-        float env = adsr.getNextSample();
 //        float modulatedCutoff;
 //        modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
         
@@ -122,12 +121,9 @@ public:
 //        setCutoff(modulatedCutoff);
         update(modulatedCutoff);
 
-        for (int smp = 0; smp < numSamples ; ++smp)
+        int endSample = startSample + numSamples;
+        for (int smp = startSample; smp < endSample ; ++smp)
         {
-//            for (int ch = 0; ch < 2; ++ch)
-//            {
-//                bufferData[ch][smp] = processSample(bufferData[ch][smp]);
-//            }
             bufferData[channel][smp] = processSample(bufferData[channel][smp]);
         }
     }
@@ -198,10 +194,11 @@ public:
         filterL.prepareToPlay(sr, 1);
         filterR.prepareToPlay(sr, 1);
     }
-    void process(AudioBuffer<float>& buffer, MyADSR& adsr, float lfoVal, int numSamples)
+    void process(AudioBuffer<float>& buffer, MyADSR& adsr, float lfoVal, int startSample, int numSamples)
     {
-        filterL.process(buffer, adsr, lfoVal, numSamples, 0);
-        filterR.process(buffer, adsr, lfoVal, numSamples, 1);
+        float env = adsr.getNextSample();
+        filterL.process(buffer, env, lfoVal, startSample, numSamples, 0);
+        filterR.process(buffer, env, lfoVal, startSample, numSamples, 1);
     }
     void setCutoff(const double newCutoffFrequencyHz)
     {

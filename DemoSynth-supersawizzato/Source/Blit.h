@@ -13,22 +13,18 @@
 #include "PluginParameters.h"
 
 #define LEAKY_INTEGRATOR_BASE_FREQUENCY        8.0
-#define LEAKY_INTEGRATOR_MOD_FREQUENCY         200.0
-#define LEAKY_INTEGRATOR_TRI_MOD_FREQUENCY     120.0
-#define LEAKY_INTEGRATOR_NOISE_FREQUENCY       350.0 // per intenderci, prima era 1251.0
-#define LEAKY_INTEGRATOR_TRI_NOISE_FREQUENCY   120.0
 
 class Blit {
 public:
     Blit() {}
     ~Blit() {}
-    void prepareToPlay(double sr);
+    void prepareToPlay(const dsp::ProcessSpec spec);
     float updateWaveform(double frequencySample, int waveform);
-    void updateLeakiness(double osc3LfoRate, double modAmount, bool isOscModOn, bool isNoiseModOn, double modMix);
+    void setBlitPhase(const int phaseDegree, const double frequency);
     void clearAccumulator();
-    //void noteOn(); // Deprecated! It was used to synchronize the samplecont of the 3 oscillator
 
 private:
+    int maxBlock;
     double sr;
     double sp;
     double pEdge = 0.0;
@@ -39,11 +35,6 @@ private:
     double alpha = 0.999;
     double leakiness = 0.0;
     double leakinessTri = 0.0;
-
-    double leakNoise = 0.0;
-    double leakTrNoi = 0.0;
-    double leakMod   = 0.0;
-    double leakTrMod = 0.0;
 
     double accSaw = 0.0;
     double accSquare = 0.0;
