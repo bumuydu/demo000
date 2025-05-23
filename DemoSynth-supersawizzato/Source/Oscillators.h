@@ -150,23 +150,19 @@ public:
     
     // depending on the number of saws and detune value
     // the frequencies of the rest of the oscillators have to be calculated
-    // 1. if numSaw odd --> then base is unchanged and the rest will be as before
-    //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
-    // 2. modify: detune logic will change. right now the detune amount becomes larger for all oscillators after the 3rd
-    // but it will be the max detune amount and the rest will be contained inside that maximum detune amount
-    void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSample, const int numSamplesOversampled)
+    // if numSaw odd --> then base is unchanged and the rest will be as before
+    // if numSaw even --> then also the 1st oscillator's frequency will be detuned
+    void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSampleOversampled, const int numSamplesOversampled)
     {
         // freqBuffer and all frequencyBuffers are in the OVERSAMPLED buffer size
-        int endSampleOversampled = startSample + numSamplesOversampled;
+        int endSampleOversampled = startSampleOversampled + numSamplesOversampled;
+        frequencyBuffers[0].copyFrom(0, startSampleOversampled, freqBuffer, 0, startSampleOversampled, numSamplesOversampled);
+        // odd
         if (activeOscs % 2 != 0)
-        {   // odd
-            // for main osc do nothing - copy to frequencyBuffers[0]
-            frequencyBuffers[0].copyFrom(0, startSample, freqBuffer, 0, startSample, numSamplesOversampled);
-//            for (int i = startSample; endSampleOversampled; ++i)
-//            {
-//                auto tmp = freqBuffer.getSample(0, i);
-//                frequencyBuffers[0].setSample(0, i, tmp);
-//            }
+        {
+            int numPairs = (activeOscs - 1) / 2;
+            
+            // for main osc do nothing
             // for the rest of the oscs --> detune them!
             if (activeOscs > 1)
             {
@@ -176,9 +172,11 @@ public:
 //                    frequencyBuffers[i+1].clear();
                     // 1,2,3... for each pair
                     int pairIndex = (i + 1) / 2;
-                    double detuneAmount = pow(cent, pairIndex);
+//                    double detuneAmount = pow(cent, pairIndex);
+                    // detuneAmount now shows the max. detune and as num. of saw increases the detune decreases
+                    double detuneAmount = pow(cent, (double)pairIndex / numPairs);
                     
-                    for (int j = startSample; j < endSampleOversampled; ++j)
+                    for (int j = startSampleOversampled; j < endSampleOversampled; ++j)
                     {
                         auto tmp = freqBuffer.getSample(0, j);
                         frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
@@ -189,15 +187,21 @@ public:
         }
         else
         {   // even
+            int numPairs = activeOscs / 2;
+            
             for (int i = 0; i < activeOscs; i+=2)
             {
-//                frequencyBuffers[i].clear();
-//                frequencyBuffers[i+1].clear();
-                
+//                double detuneAmount = pow(cent, pairIndex);
                 int pairIndex = (i + 1) / 2;
-                double detuneAmount = pow(cent, pairIndex);
-
-                for (int j = startSample; j < endSampleOversampled; ++j)
+                double detuneAmount;
+                
+                // just two active oscs needs special case
+                if (numPairs == 1)
+                    detuneAmount = pow(cent, 0.5);
+                else
+                    detuneAmount = pow(cent, (double)pairIndex / numPairs);
+            
+                for (int j = startSampleOversampled; j < endSampleOversampled; ++j)
                 {
                     auto tmp = freqBuffer.getSample(0, j);
                     frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
@@ -206,6 +210,7 @@ public:
             }
         }
     }
+
     
     // SETTERS, GETTERS AND MISC.
     
