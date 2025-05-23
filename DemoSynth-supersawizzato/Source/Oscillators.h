@@ -339,7 +339,6 @@ public:
         
     }
     
-    // old MONO method -- modify: must erase it if it is not going to be used
     void process(AudioBuffer<float>& buffer, int startSample, int numSamples, float gain)
     {
 //        buffer.clear();
