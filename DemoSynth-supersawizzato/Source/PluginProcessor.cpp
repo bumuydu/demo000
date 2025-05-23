@@ -199,8 +199,9 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             
             if (paramID == Parameters::nameOversampling)
                 voice->setOversampling(newValue);
-
-                
+            
+            if (paramID == Parameters::nameMaster)
+                voice->setMasterGain(newValue);
         }
 
 }

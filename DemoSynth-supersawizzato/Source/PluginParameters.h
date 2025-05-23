@@ -32,12 +32,13 @@ namespace Parameters
     static const String nameNRel = "NOISEREL";
     static const String nameNFilt = "NFILT";
     static const String nameOversampling = "OVERSMP";
+    static const String nameMaster = "MASTER";
 
     // CONSTANTS
     static const float dbFloor = -48.0f;
 
     // PARAM DEFAULTS
-	static const float defaultAtk = 0.000f;
+	static const float defaultAtk = 0.01f;
 	static const float defaultDcy = 0.025f;
 	static const float defaultSus = 0.6f;
 	static const float defaultRel = 1.000f;
@@ -50,6 +51,7 @@ namespace Parameters
     static const float defaultLfoFreq = 0.1f;
     static const float defaultNoiseRel = 0.7f;
     static const float defaultNFilt = 0.5f;
+    static const float defaultMaster = 0.8f;
     
     static const int defaultSawReg = 2; // in this case, it sets the default register to 0
     static const int defaultSawNum = 5;
@@ -88,13 +90,14 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameLfoFreq, 18 }, "LFO FREQ", NormalisableRange<float>(0.1f, 20.0f), defaultLfoFreq));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoRate, 19 }, "LFO RATE", MetricTime::timeChoices, defaultLfoRate));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoSync, 20 }, "LFO SYNC", StringArray{"OFF","ON"}, defaultLfoSync));
-        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameAtk, 21 }, "Attack (s)",    NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultAtk));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameAtk, 21 }, "Attack (s)",    NormalisableRange<float>(0.001f, 10.0f, 0.001f, 0.3f), defaultAtk));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDcy, 22 }, "Decay (s)",     NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultDcy));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSus, 23 }, "Sustain (amp)", NormalisableRange<float>(0.0f, 1.00f), defaultSus));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameRel, 24 }, "Release (s)",   NormalisableRange<float>(0.0f, 10.0f, 0.001f, 0.3f), defaultRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNRel, 25 }, "Noise Release (s)", NormalisableRange<float>(0.0f, 5.0f, 0.01f, 0.3f), defaultNoiseRel));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameNFilt, 26 }, "Noise Color/Filter (LPF,HPF)", NormalisableRange<float>(0.0f, 1.0f), defaultNFilt));
-        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameOversampling, 27 }, "Oversampling", StringArray{"2X","4X"}, defaultOversampling));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameOversampling, 27 }, "Oversampling -- not yet implemented", StringArray{"2X","4X"}, defaultOversampling));
+        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameMaster, 28 }, "Master", NormalisableRange<float>(-48.0f, 0.0f), defaultMaster));
         
 
 		return { params.begin(), params.end() };

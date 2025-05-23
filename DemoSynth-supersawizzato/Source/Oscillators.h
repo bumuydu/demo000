@@ -73,7 +73,7 @@ public:
     void prepareToPlay(const dsp::ProcessSpec specInput)
     {
         spec = specInput;
-        tmpPanBuffer.setSize(2, spec.maximumBlockSize);
+        tmpPanBuffer.setSize(1, spec.maximumBlockSize);
         
         // Inizializzo l'oscillatore
         for (int i = 0; i < MAX_SAW_OSCS; ++i)
@@ -108,15 +108,16 @@ public:
     }
     
     // the process method now with stereo width parameter that pans every oscillator
-    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, const int startSample, const int numSamples)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, const int startSampleOversampled, const int numSamplesOversampled)
     {
         auto* left = buffer.getWritePointer(0);
         auto* right = buffer.getWritePointer(1);
         
+        setSawFreqs(frequencyBuffer, startSampleOversampled, numSamplesOversampled);
+        
         for (int i = 0; i < activeOscs; ++i)
         {
             tmpPanBuffer.clear();
-            setSawFreqs(frequencyBuffer, startSample, numSamples);
             
             float oscPosition;
             if (activeOscs == 1)
@@ -133,11 +134,11 @@ public:
 
             // use tmpPanBuffer to process the oscillators
             // then add its contents to the main buffer applying the pan on buffers
-            blitsOscs[i].getNextAudioBlock(tmpPanBuffer, frequencyBuffers[i], startSample, numSamples);
+            blitsOscs[i].getNextAudioBlock(tmpPanBuffer, frequencyBuffers[i], startSampleOversampled, numSamplesOversampled);
         
             const float* tmp = tmpPanBuffer.getReadPointer(0);
-            
-            for (int smp = 0; smp < numSamples; ++smp)
+            const int endSampleOs = startSampleOversampled + numSamplesOversampled;
+            for (int smp = startSampleOversampled; smp < endSampleOs; ++smp)
             {
                 left[smp]  += tmp[smp] * leftGain;
                 right[smp] += tmp[smp] * rightGain;
@@ -153,27 +154,32 @@ public:
     //    if numSaw even --> then also the 1st oscillator's frequency will be detuned
     // 2. modify: detune logic will change. right now the detune amount becomes larger for all oscillators after the 3rd
     // but it will be the max detune amount and the rest will be contained inside that maximum detune amount
-    void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSample, const int numSamples)
+    void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSample, const int numSamplesOversampled)
     {
-        int endSample = startSample + numSamples;
+        // freqBuffer and all frequencyBuffers are in the OVERSAMPLED buffer size
+        int endSampleOversampled = startSample + numSamplesOversampled;
         if (activeOscs % 2 != 0)
         {   // odd
-//            oscillators[0].setFrequency(baseFreq, true);
-//            blitsOscs[0].setFrequency(baseFreq);
-            // for main osc do nothing
-            
+            // for main osc do nothing - copy to frequencyBuffers[0]
+            frequencyBuffers[0].copyFrom(0, startSample, freqBuffer, 0, startSample, numSamplesOversampled);
+//            for (int i = startSample; endSampleOversampled; ++i)
+//            {
+//                auto tmp = freqBuffer.getSample(0, i);
+//                frequencyBuffers[0].setSample(0, i, tmp);
+//            }
+            // for the rest of the oscs --> detune them!
             if (activeOscs > 1)
             {
                 for (int i = 1; i < activeOscs; i+=2)
                 {
 //                    frequencyBuffers[i].clear();
 //                    frequencyBuffers[i+1].clear();
-                    
                     // 1,2,3... for each pair
                     int pairIndex = (i + 1) / 2;
                     double detuneAmount = pow(cent, pairIndex);
                     
-                    for (int j = startSample; j < endSample; ++j) {
+                    for (int j = startSample; j < endSampleOversampled; ++j)
+                    {
                         auto tmp = freqBuffer.getSample(0, j);
                         frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
                         frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
@@ -183,14 +189,16 @@ public:
         }
         else
         {   // even
-            for (int i = 0; i < activeOscs; i+=2) {
+            for (int i = 0; i < activeOscs; i+=2)
+            {
 //                frequencyBuffers[i].clear();
 //                frequencyBuffers[i+1].clear();
                 
                 int pairIndex = (i + 1) / 2;
                 double detuneAmount = pow(cent, pairIndex);
 
-                for (int j = startSample; j < endSample; ++j) {
+                for (int j = startSample; j < endSampleOversampled; ++j)
+                {
                     auto tmp = freqBuffer.getSample(0, j);
                     frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
                     frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
@@ -375,7 +383,7 @@ private:
 
 class NaiveOscillator {
 public:
-    NaiveOscillator(const double defaultFrequency = 20.0, const int defaultWaveform = 0)
+    NaiveOscillator(const double defaultFrequency, const int defaultWaveform)
     {
         frequency.setTargetValue(defaultFrequency);
         waveform = defaultWaveform;
@@ -415,13 +423,16 @@ public:
         synced = newValue;
     }
 
-    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
+//    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
+    float getNextAudioBlock(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
     {
         const int numCh = buffer.getNumChannels();
         auto data = buffer.getArrayOfWritePointers();
 
         // numSamples - 1 because I return the last sample
-        for (int smp = 0; smp < numSamples - 1; ++smp)
+        const int endSample = startSample + numSamples;
+//        for (int smp = 0; smp < numSamples - 1; ++smp)
+        for (int smp = startSample; smp < endSample - 1; ++smp)
         {
             const double sampleValue = getNextAudioSample();
 
@@ -433,20 +444,21 @@ public:
         return getNextAudioSample();
     }
     
-    float getNextAudioBlockFloat(AudioBuffer<float>& buffer, const int numSamples)
+    float getNextAudioBlockFloat(AudioBuffer<float>& buffer, const int startSample, const int numSamples)
     {
-        const int numCh = buffer.getNumChannels();
+//        const int numCh = buffer.getNumChannels();
         auto data = buffer.getArrayOfWritePointers();
 
         // numSamples - 1 because I return the last sample
-        for (int smp = 0; smp < numSamples - 1; ++smp)
+        const int endSample = startSample + numSamples;
+        for (int smp = startSample; smp < endSample - 1; ++smp)
         {
             const double sampleValue = getNextAudioSample();
 
-            for (int ch = 0; ch < numCh; ++ch)
-            {
-                data[ch][smp] = sampleValue;
-            }
+//            for (int ch = 0; ch < numCh; ++ch)
+//            {
+                data[0][smp] = sampleValue;
+//            }
         }
         return getNextAudioSample();
     }

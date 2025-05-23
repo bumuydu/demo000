@@ -21,16 +21,15 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultAtk = 0.005f, float defaultDcy = 0.025f, float defaultSus = 0.6f, float defaultRel = 0.7f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 20.0, int defaultLfoWf = 0 /*, int defaultSubWf = 0*/)
-    : /*sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth)*/sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), ampAdsrParams(defaultAtk, defaultDcy, defaultSus, defaultRel),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
+	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f, float defaultSaw = 1.0f, float defaultSub = 0.0f, float defaultNoise = 0.0f,  int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0 /*, int defaultSubWf = 0*/)
+    : /*sawOscs(defaultSawNum, defaultDetune, defaultPhase, defaultStereoWidth)*/sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth),  sawGain(defaultSaw), subGain(defaultSub), noiseGain(defaultNoise), subRegister(defaultSubReg), egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)/*, subWaveform(defaultSubWf)*/
 	{
+//        sawGainn.setCurrentAndTargetValue(Decibels::decibelsToGain(-2.0f));
+        masterGain.setCurrentAndTargetValue(Decibels::decibelsToGain(0.0f));
 	};
 	
 	~SimpleSynthVoice() {};
 
-	// ==== Metodi astratti ereditati da SynthesiserVoice che devono essere implementati ====
-
-	// Deve ritornare true se questa voce è adibita alla riproduzione di un certo SynthSound.
 	bool canPlaySound(SynthesiserSound* sound) override
 	{
 		return dynamic_cast<MySynthSound*>(sound) != nullptr;
@@ -49,7 +48,6 @@ public:
         frequencyBuffer.setSize(0, 0);
     }
 
-	// Metodo chiamato dalla classe Synthesiser per ogni Note-on assegnato a questa voce
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{
 		// Reset phase for each oscillator
@@ -63,13 +61,11 @@ public:
 
 		// Trigger the ADSR
 		ampAdsr.noteOn();
-        
-		// Mi salvo la velocity da usare come volume della nota suonata
 		velocityLevel = velocity;
+//        updateGain();
         trigger = true;
 	}
 	
-	// Metodo chiamato dalla classe Synthesiser per ogni Note-off assegnato a questa voce
 	void stopNote(float velocity, bool allowTailOff) override
 	{
 		// Trigger the release phase of the ADSR
@@ -80,132 +76,82 @@ public:
 			clearCurrentNote();
 	}
 	
-	// Metodo chiamato dalla classe Synthesiser per ogni Control Change ricevuto
 	void controllerMoved(int controllerNumber, int newControllerValue) override {}
 	
-	// Metodo chiamato dalla classe Synthesiser in caso venga mossa la pitch-wheel
 	void pitchWheelMoved(int newPitchWheelValue) override {}
 
 	void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override
 	{
         // calculates the audio block and returns the last sample
-        float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
+//        float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
+        float lfoVal = lfo.getNextAudioBlock(modulation, startSample, numSamples);
         
-        // recalculate detune frequencies etc. if in case they have been changed after the note was triggered
-        frequencyModulation(0, numSamples);
+        frequencyModulation(startSample, numSamples);
         
-		// Se la voce non è attiva ci si può fermare qui
 		if (!isVoiceActive())
 			return;
-
-		// Clearing buffers to be processed
-        oversmpBuffer.clear(0, numSamples);
-		oscillatorBuffer.clear(0, numSamples);
-        subBuffer.clear(0, numSamples);
-        noiseBuffer.clear(0, numSamples);
-        mixerBuffer.clear(0, numSamples);
-
-		// Preparazione del ProcessContext per le classi DSP
-//		auto voiceData = oscillatorBuffer.getArrayOfWritePointers();
-//		dsp::AudioBlock<float> audioBlock{ voiceData, 2, (size_t)numSamples };
-//		dsp::ProcessContextReplacing<float> context{ audioBlock };
         
-        auto subData = subBuffer.getArrayOfWritePointers();
-        dsp::AudioBlock<float> subAudioBlock{ subData, 1, (size_t)numSamples };
-        dsp::ProcessContextReplacing<float> subContext{ subAudioBlock };
-
-        auto mixerData = mixerBuffer.getArrayOfWritePointers();
-        dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
-        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
+        oversmpBuffer.clear();
+		oscillatorBuffer.clear();
+        subBuffer.clear();
+        noiseBuffer.clear();
+        mixerBuffer.clear();
         
         // 2X OVERSAMPLING -- generate sounds at oversampled sample rate and decimate to original sample rate
         // process oversampled block with twice the number of samples
         
-//        auto ovrsmpblock = oversampler->processSamplesUp(audioBlock);
-//        sawOscs.processStereo(ovrsmpblock, numSamples * oversamplingFactor);
-//        oversampler->processSamplesDown (audioBlock);
+//        sawOscs.process(oscillatorBuffer, frequencyBuffer, startSample, numSamples);
+        sawOscs.process(oversmpBuffer, frequencyBuffer, (startSample * oversamplingFactor), (numSamples * oversamplingFactor));
+        filterAndDecimate(oversmpBuffer, oscillatorBuffer, (startSample * oversamplingFactor), numSamples * oversamplingFactor);
         
-        sawOscs.process(oscillatorBuffer, frequencyBuffer, 0, numSamples);
-//        sawOscs.process(oversmpBuffer, startSample, numSamples * oversamplingFactor);
-
-//        for (int ch = 0; ch < 2; ++ch)
-//        {
-//            dsp::AudioBlock<float> chBlock = audioBlock.getSingleChannelBlock(ch);
-//            dsp::ProcessContextReplacing<float> chContext {chBlock};
-//            antialiasingFilters[ch].process(chContext);
-//        }
-//        // ANTIALIASING FILTER & DECIMATION
-//        for (int ch = 0; ch < 2; ++ch)
-//        {
-//            dsp::AudioBlock<float> chBlock = audioBlock.getSingleChannelBlock(ch);
-//            dsp::ProcessContextReplacing<float> chContext{chBlock};
-//            
-//            // Apply each filter stage in sequence
-//            auto* filters = (ch == 0) ? antialiasingFiltersL : antialiasingFiltersR;
-//            
-//            // Don't reset filters during audio processing - only initialize them once in prepareToPlay
-//            for (int i = 0; i < kNumFilterStages; ++i)
-//            {
-//                filters[i].process(chContext);
-//            }
-//        }
-//
-//        // Decimate the oversampled audio back to original sample rate
-//        for (int ch = 0; ch < 2; ++ch)
-//        {
-//            auto* out = oscillatorBuffer.getWritePointer(ch, startSample);
-//            auto* in = oversmpBuffer.getReadPointer(ch);
-//
-//            for (int i = 0; i < numSamples; ++i)
-//                out[i] = in[i * oversamplingFactor];
-//        }
-                
-//        subOscillator.process(subContext);
-        subOscillator.getNextAudioBlockFloat(subBuffer, numSamples);
-        
+        subOscillator.getNextAudioBlockFloat(subBuffer, startSample, numSamples);
         // noise: trigger the ReleaseFilter envelope
         if(trigger)
         {
             noiseOsc.trigger(startSample, velocityLevel);
             trigger = false;
         }
-        
-        // process the noise
         noiseOsc.process(noiseBuffer, startSample, numSamples, noiseGain);
         // filtering the noise with its parameter before the main LPF
-        noiseFilter.processBlock(noiseBuffer, numSamples);
+//        noiseFilter.processBlock(noiseBuffer, numSamples);
+        noiseFilter.processBlock(noiseBuffer, startSample, numSamples);
 
 		// Volume proporzionale alla velocity
-        for (int ch = 0; ch < oscillatorBuffer.getNumChannels(); ++ch)
-        {
-            oscillatorBuffer.applyGain(ch, 0, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
-        }
-        subBuffer.applyGain(0, numSamples, velocityLevel * subGain);
-        
-        // mix all buffers into one
-        mixerBuffer.addFrom(0, 0, oscillatorBuffer, 0, 0, numSamples);
-        mixerBuffer.addFrom(1, 0, oscillatorBuffer, 1, 0, numSamples);
-
-        // Then: add mono sub and noise to *both* channels
         for (int ch = 0; ch < 2; ++ch)
         {
-            mixerBuffer.addFrom(ch, 0, subBuffer, 0, 0, numSamples);
-            mixerBuffer.addFrom(ch, 0, noiseBuffer, 0, 0, numSamples);
+            oscillatorBuffer.applyGain(ch, startSample, numSamples, velocityLevel * sawGain / std::sqrt(sawOscs.getActiveOscs()));
+//            sawGainn.applyGain(oscillatorBuffer.getWritePointer(ch) + startSample, numSamples);
+        }
+        
+        subBuffer.applyGain(startSample, numSamples, velocityLevel * subGain);
+        
+        // mix all buffers into one
+//        mixerBuffer.addFrom(0, startSample, oscillatorBuffer, 0, startSample, numSamples);
+//        mixerBuffer.addFrom(1, startSample, oscillatorBuffer, 1, startSample, numSamples);
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            mixerBuffer.addFrom(ch, startSample, oscillatorBuffer, ch, startSample, numSamples);
+            mixerBuffer.addFrom(ch, startSample, subBuffer, 0, startSample, numSamples);
+            mixerBuffer.addFrom(ch, startSample, noiseBuffer, 0, startSample, numSamples);
         }
         
         // FILTERING - process the mixed buffer through a ladder filter
-//        ladderFilter.process(mixerContext);
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
-//        ladderFilter.processWithEG(mixerContext, ampAdsr, lfoVal, numSamples);
-        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, 0, numSamples);
+        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, startSample, numSamples);
 
         // La modulo in ampiezza con l'ADSR
-        ampAdsr.applyEnvelopeToBuffer(mixerBuffer, 0, numSamples);
-        
+        ampAdsr.applyEnvelopeToBuffer(mixerBuffer, startSample, numSamples);
+                
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            masterGain.applyGain(mixerBuffer.getWritePointer(ch) + startSample, numSamples);
+        }
+
 		// copy the filtered buffer to the output buffer
         for (int ch = 0; ch < 2; ++ch)
-            outputBuffer.addFrom(ch, startSample, mixerBuffer, ch, 0, numSamples);
-        
+        {
+            outputBuffer.addFrom(ch, startSample, mixerBuffer, ch, startSample, numSamples);
+        }
 		// Se gli ADSR hanno finito la fase di decay (o se ho altri motivi per farlo)
 		// segno la voce come libera per suonare altre note
         if (!ampAdsr.isActive() && noiseOsc.envFinished())
@@ -213,100 +159,82 @@ public:
             clearCurrentNote();
             trigger = false;
         }
-		
 	}
+    
+    void filterAndDecimate(AudioBuffer<float>& oversmpBuf, AudioBuffer<float>& output, int startSampleOs, int numSamplesOs)
+    {
+        auto* left = oversmpBuf.getWritePointer(0);
+        auto* right = oversmpBuf.getWritePointer(1);
+        auto* inL = oversmpBuf.getReadPointer(0);
+        auto* outL = output.getWritePointer(0);
+        auto* inR = oversmpBuf.getReadPointer(1);
+        auto* outR = output.getWritePointer(1);
+
+        const int endSampleOs = startSampleOs + numSamplesOs;
+        // modify: if coefficients change dynamically --> reset
+//        iirFilters[ch].reset();
+        
+        // filter all samples of the oversampled buffer
+        for (int smp = startSampleOs; smp < endSampleOs; ++smp)
+        {
+            left[smp] = antialiasingFilterL.processSample(inL[smp]);
+            right[smp] = antialiasingFilterR.processSample(inR[smp]);
+        }
+
+        // decimate
+        const int startSampleOriginal = startSampleOs / oversamplingFactor;
+        const int numSamplesOriginal = numSamplesOs / oversamplingFactor;
+        const int endSampleOriginal = startSampleOriginal + numSamplesOriginal;
+        for (int i = startSampleOriginal; i < endSampleOriginal; ++i)
+        {
+            outL[i] = inL[i * oversamplingFactor];
+            outR[i] = inR[i * oversamplingFactor];
+        }
+    }
 
 	// ==== Metodi personali ====
 
-	// Prepare to play of a single voice
 	void prepareToPlay(double sampleRate, int samplesPerBlock)
 	{
-        double oversmpSR = sampleRate * oversamplingFactor;
-        // Resetto gli ADSR
-		ampAdsr.setSampleRate(sampleRate);
-		ampAdsr.setParameters(ampAdsrParams);
-        
-        lfo.prepareToPlay(sampleRate);
-
-		// Preparo le ProcessSpecs per l'oscillatore ed eventuali altre classi DSP
         // for the mono sounds, i.e. sub and noise
         spec.maximumBlockSize = samplesPerBlock;
 		spec.sampleRate = sampleRate;
 		spec.numChannels = 1;
         // for the oversampled saw waves
         stereoOversampledSpec.maximumBlockSize = samplesPerBlock * oversamplingFactor;
-        stereoOversampledSpec.sampleRate = oversmpSR;
+        stereoOversampledSpec.sampleRate = sampleRate * oversamplingFactor;
         stereoOversampledSpec.numChannels = 2;
-        // for the ladder filter
+        // for the stereo LPF
         specStereo.maximumBlockSize = samplesPerBlock;
         specStereo.sampleRate = sampleRate;
         specStereo.numChannels = 2;
-        
-        noteNumber.reset(sampleRate, 0.001f);
-        frequencyBuffer.setSize(1, samplesPerBlock);
-        
-        // set up the oversampler with the same specs -- the 1 is the oversampling factor where 2^n
-        oversampler = std::make_unique<dsp::Oversampling<float>>(stereoOversampledSpec.numChannels, std::log2(oversamplingFactor), dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
-        oversampler->initProcessing(samplesPerBlock);
-        oversampler->reset();
-        
-//        antialiasingSpec.maximumBlockSize = samplesPerBlock * oversamplingFactor;
-//        antialiasingSpec.sampleRate = oversmpSR;
-//        antialiasingSpec.numChannels = 1;
-        
-//        *antiAliasingFilter.state = *juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(
-//                                        cutoffFrequency, stereoOversampledSpec.sampleRate, 4);
-//        auto designedCoefficientsArray = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(
-//                                                cutoffFrequency, stereoOversampledSpec, 4);
-
-//        antiAliasingFilter.prepare(stereoOversampledSpec);
-//        antiAliasingFilter.reset(); // Reset filter state
-        
-//        auto cutoffFrequency = sampleRate * 0.45;
-        // butterworth, cutoff at nyquist, oversampled SR, 4th order (Q) (higher order = steeper cutoff)
-//        auto coeffs = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(cutoffFrequency, oversmpSR, 4);
-
-//        lowpassCoeffs = coeffs[0];
-//
-//        for (int ch = 0; ch < 2; ++ch)
-//        {
-//            antialiasingFilters[ch].coefficients = lowpassCoeffs;
-////            antialiasingFilters[ch].prepare(antialiasingSpec);
-//            antialiasingFilters[ch].reset();
-//        }
-//        jassert(coeffs.size() >= kNumFilterStages);
-//        for (int i = 0; i < kNumFilterStages; ++i)
-//        {
-//            lowpassCoeffs[i] = coeffs[i];
-//            
-//            // Configure left channel filters
-//            antialiasingFiltersL[i].coefficients = lowpassCoeffs[i];
-//            antialiasingFiltersL[i].reset();
-//            
-//            // Configure right channel filters
-//            antialiasingFiltersR[i].coefficients = lowpassCoeffs[i];
-//            antialiasingFiltersR[i].reset();
-//        }
-        
-		// initializing oscillators, noise generator and filters
-//        sawOscs.prepareToPlay(stereoOversampledSpec);
-        sawOscs.prepareToPlay(specStereo);
-        
-//        subOscillator.prepare(spec);
-        subOscillator.prepareToPlay(sampleRate);
-
-//        ladderFilter.prepare(specStereo);
-        moogFilter.prepareToPlay(sampleRate, 2);
-
-        noiseOsc.prepareToPlay(spec);
-        noiseFilter.prepareToPlay(spec);
-
+             
         oversmpBuffer.setSize(2, samplesPerBlock * oversamplingFactor);
-		oscillatorBuffer.setSize(2, samplesPerBlock);
+        oscillatorBuffer.setSize(2, samplesPerBlock);
         subBuffer.setSize(1, samplesPerBlock);
         noiseBuffer.setSize(1, samplesPerBlock);
         mixerBuffer.setSize(2, samplesPerBlock);
         modulation.setSize(2, samplesPerBlock);
+        frequencyBuffer.setSize(1, samplesPerBlock * oversamplingFactor);
+        
+        antialiasingFilterL.reset();
+        antialiasingFilterR.reset();
+        halfBandCoeffs = juce::dsp::IIR::Coefficients<float>::makeLowPass(stereoOversampledSpec.sampleRate, jmin(20000.0, sampleRate * 0.4999));
+        antialiasingFilterL.coefficients = halfBandCoeffs;
+        antialiasingFilterR.coefficients = halfBandCoeffs;
+        
+		// initializing oscillators, noise generator and filters
+        sawOscs.prepareToPlay(stereoOversampledSpec);
+//        sawOscs.prepareToPlay(specStereo);
+        subOscillator.prepareToPlay(sampleRate);
+        noiseOsc.prepareToPlay(spec);
+        noiseFilter.prepareToPlay(spec);
+        moogFilter.prepareToPlay(sampleRate);
+        lfo.prepareToPlay(sampleRate);
+        ampAdsr.prepareToPlay(sampleRate);
+        noteNumber.reset(sampleRate, 0.001f);
+//        sawGainn.reset(sampleRate, 0.01f);
+        masterGain.reset(sampleRate, 0.001f);
 	}
     
     void updatePosition(AudioPlayHead::CurrentPositionInfo newPosition)
@@ -316,29 +244,33 @@ public:
     
     void updateFreqs()
     {
-//        if (isVoiceActive()) {
-            double baseFreq = nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1);
-//            sawOscs.setSawFreqs(baseFreq);
-            
-            double subFreq = baseFreq / std::pow(2, subRegister + 3);
-            subOscillator.setFrequency(subFreq);
-//        }
+        double baseFreq = nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1);
+        double subFreq = baseFreq / std::pow(2, subRegister + 3);
+        subOscillator.setFrequency(subFreq);
     }
+    
+//    void updateGain()
+//    {
+//        sawGainn.setTargetValue(sawGain * velocityLevel / std::sqrt(sawOscs.getActiveOscs()));
+//    }
     
     double nn2hz(double nn)
     {
         return pow(2.0, (nn - 69.0) / 12.0) * 440.0;
     }
     
-    void frequencyModulation(int startSample, int numSamples) {
+    void frequencyModulation(int startSample, int numSamples)
+    {
         auto fmOsc1Data = frequencyBuffer.getArrayOfWritePointers();
 
-        for (int i = startSample; i < (startSample + numSamples); ++i) {
-            // Setting standard value for the filter and the oscillator frequency
+        for (int i = startSample; i < numSamples; ++i)
+        {
             const double currentNoteNumber = noteNumber.getNextValue();
-//            fmOsc1Data[0][i] = currentNoteNumber;
-//            fmOsc1Data[0][i] = nn2hz(fmOsc1Data[0][i]) * std::pow(2, sawRegister - 1);
-            fmOsc1Data[0][i] = nn2hz(currentNoteNumber) * std::pow(2, sawRegister - 1);
+            const double note = nn2hz(currentNoteNumber) * std::pow(2, sawRegister - 1);
+            for (int j = 0; j < oversamplingFactor; ++j)
+            {
+                fmOsc1Data[0][(i * oversamplingFactor) + j] = note;
+            }
         }
     }
 	
@@ -385,8 +317,10 @@ public:
     void setSawGain(const float newValue)
     {
         sawGain = newValue;
+//        sawGainn.setTargetValue(newValue);
+//        updateGain();
     }
-    
+     
     void setSubGain(const float newValue)
     {
         subGain = newValue;
@@ -400,26 +334,22 @@ public:
 	// Setters of ADSR parameters
 	void setAttack(const float newValue)
 	{
-		ampAdsrParams.attack = newValue;
-		ampAdsr.setParameters(ampAdsrParams);
+        ampAdsr.setAttack(newValue);
 	}
 
 	void setDecay(const float newValue)
 	{
-		ampAdsrParams.decay = newValue;
-		ampAdsr.setParameters(ampAdsrParams);
+        ampAdsr.setDecay(newValue);
 	}
 
 	void setSustain(const float newValue)
 	{
-		ampAdsrParams.sustain = sqrt(newValue);
-		ampAdsr.setParameters(ampAdsrParams);
+        ampAdsr.setSustain(newValue);
 	}
 
 	void setRelease(const float newValue)
 	{
-		ampAdsrParams.release = newValue;
-		ampAdsr.setParameters(ampAdsrParams);
+        ampAdsr.setRelease(newValue);
 	}
     
     void setSubReg(const int newValue)
@@ -431,51 +361,38 @@ public:
     void setSubWf(const int newValue)
     {
         switch (newValue)
-                {
-                case 0: // sinusoidal
-//                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
-                        subOscillator.setWaveform(0);
-                    break;
-                case 1: // square
-//                    subOscillator = dsp::Oscillator<float> { [](float x)
-//                        {
-//                            return x > 0.0f ? 1.0f : -1.0f;
-//                        } };
-                        subOscillator.setWaveform(3);
-                    break;
-                default:
-//                    subOscillator = dsp::Oscillator<float> { [](float x) {return std::sin(x); } };
-                        subOscillator.setWaveform(0);
-                    // info: Sub Oscillator not selected correctly
-                    //jassertfalse;
-                    break;
-                }
-//        subOscillator.prepare(spec);
+        {
+        case 0: // sinusoidal
+            subOscillator.setWaveform(0);
+            break;
+        case 1: // square
+            subOscillator.setWaveform(3);
+            break;
+        default:
+            subOscillator.setWaveform(0);
+            break;
+        }
         updateFreqs();
     }
     
     void setCutoff(const float newValue)
     {
-//        ladderFilter.setCutoff(newValue);
         moogFilter.setCutoff(newValue);
     }
     
     void setQuality(const float newValue)
     {
-//        ladderFilter.setResonance(newValue);
         moogFilter.setResonance(newValue);
     }
     
     void setFilterEnvAmt(const float newValue)
     {
-//        ladderFilter.setEnvAmt(newValue);
         moogFilter.setEnvAmt(newValue);
 //        egAmt = newValue;
     }
     
     void setFilterLfoAmt(const float newValue)
     {
-//        ladderFilter.setLfoAmt(newValue);
         moogFilter.setLfoAmt(newValue);
     }
     
@@ -512,65 +429,58 @@ public:
     void setOversampling(const int newValue)
     {
         // parameter is choice = values are index values 0 and 1
-        oversamplingFactor = (newValue + 1) * 2;
+//        oversamplingFactor = (newValue + 1) * 2;
+        // modify: interrupt sounds and processing? -- then, reset the prepareToPlay?
 //        prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
+    }
+    
+    void setMasterGain(const float newValue)
+    {
+        masterGain.setTargetValue(Decibels::decibelsToGain(newValue));
     }
     
 private:
     dsp::ProcessSpec spec;
     dsp::ProcessSpec specStereo;
     dsp::ProcessSpec stereoOversampledSpec;
-    dsp::ProcessSpec antialiasingSpec;
     
     int oversamplingFactor = 2;
-//    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>> antiAliasingFilter;
-//    juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, juce::dsp::IIR::Coefficients<float>::Ptr> antiAliasingFilter;
-//    juce::dsp::IIR::Filter<float> antialiasingFilters[2];
-//    dsp::IIR::Coefficients<float>::Ptr lowpassCoeffs;
-//    
-//    static constexpr int kNumFilterStages = 2;
-//    dsp::IIR::Filter<float> antialiasingFiltersL[kNumFilterStages];
-//    dsp::IIR::Filter<float> antialiasingFiltersR[kNumFilterStages];
-//    dsp::IIR::Coefficients<float>::Ptr lowpassCoeffs[kNumFilterStages];
-//    
-    std::unique_ptr<dsp::Oversampling<float>> oversampler;
-
+    
+    juce::dsp::IIR::Filter<float> antialiasingFilterL, antialiasingFilterR;
+    juce::dsp::IIR::Coefficients<float>::Ptr halfBandCoeffs;
+    
     SawOscillators sawOscs;
     NoiseOsc noiseOsc;
-    // Sub Oscillator
-//    dsp::Oscillator<float> subOscillator{ [](float x) {return std::sin(x); } };
-    NaiveOscillator lfo;
     NaiveOscillator subOscillator;
-
+    NaiveOscillator lfo;
+    
     // to track detune, register parameters on active note
     int currentMidiNote = 60;
     SmoothedValue<double, ValueSmoothingTypes::Linear> noteNumber;
     AudioBuffer<double> frequencyBuffer;
 
-	// Linear ADSR --> modify: will add a param (slope) which will make the lines nice and exponential curves
+	// double ADSR
 	MyADSR ampAdsr;
-	ADSR::Parameters ampAdsrParams;
     
     // used for triggering the noise envelope
     bool trigger = false;
-    
-    // osc params
-    int sawRegister = 0;
-    
+
     // osc level params
     float sawGain;
     float subGain;
     float noiseGain;
+//    SmoothedValue<float, ValueSmoothingTypes::Linear> sawGainn;
+    SmoothedValue<float, ValueSmoothingTypes::Linear> masterGain;
     
+    // osc params
+    int sawRegister = 0;
     // sub params
     int subRegister;
-    
-    // modify: are these necessary? for initial parameter values in the interface... maybe? -- have to check
+    // modify: this is not necessary unless I need to set the initial parameter value in the interface
     //int subWaveform;
     
     // filters
-//    LadderFilter ladderFilter;          // LPF for the whole synth
-    MoogFilters moogFilter;
+    MoogFilters moogFilter;             // LPF for the whole synth
     StereoFilter noiseFilter;           // filter for noise
     float egAmt = 0.0f;
     

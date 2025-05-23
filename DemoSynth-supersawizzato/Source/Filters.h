@@ -4,96 +4,6 @@
 #include "Matrix.h"
 #include "PluginParameters.h"
 
-class LadderFilter : public dsp::LadderFilter<float>
-{
-public:
-    LadderFilter(){}
-    ~LadderFilter(){}
-    
-    void prepare(const dsp::ProcessSpec& spec)
-    {
-        dsp::LadderFilter<float>::prepare(spec);
-        
-        // default values
-        dsp::LadderFilter<float>::setMode(dsp::LadderFilter<float>::Mode::LPF12);
-        dsp::LadderFilter<float>::setCutoffFrequencyHz(Parameters::defaultFiltHz);
-        dsp::LadderFilter<float>::setResonance(0.0f);
-    }
-    
-    void processWithEG(dsp::ProcessContextReplacing<float>& context, MyADSR& adsr, float lfoVal, int numSamples)
-    {
-//        auto mixerData = buffer.getArrayOfWritePointers();
-//        dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
-//        dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
-        
-//        if(egAmt == 0)
-//        {
-//            
-//            dsp::AudioBlock<float> mixerBlock{ mixerData, 2, (size_t)numSamples };
-//            dsp::ProcessContextReplacing<float> mixerContext{ mixerBlock };
-//            process(mixerContext);
-//        }
-//        else
-//        {
-//            // must loop over channels and samples to process
-//            for (int smp = 0; smp < numSamples; ++smp)
-//            {
-//                float env = adsr.getNextSample();
-//                DBG("env val:" + String(env));
-//                DBG("egAmt:" + String(egAmt));
-//                DBG("cutoff:" + String(cutoff));
-//
-//                float modulatedCutoff = cutoff + (env * egAmt * 5000.0f);
-//                DBG("MODDED:" + String(modulatedCutoff));
-//                modulatedCutoff = jlimit(20.0f, 20000.0f, modulatedCutoff);
-//                setCutoffFrequencyHz(modulatedCutoff);
-//                
-//                for (int ch = 0; ch < 2; ++ch)
-//                {
-//                    mixerData[ch][smp] = processSample(mixerData[ch][smp], ch);
-//                }
-//            }
-//        }
-        
-        // working sample by sample was TOO CPU-heavy -- would completely become noise
-        // again, using context instead of buffer or block
-        
-        float modulatedCutoff;
-        
-        float env = adsr.getNextSample();
-//        modulatedCutoff = cutoff + (env * egAmt * 5000.0f);           // 5000 Hz seems audible to control these parameters
-        modulatedCutoff = cutoff + (env * egAmt * 5000.0f) + (lfoAmt * lfoVal * 5000.0f);
-
-        // the cutoff must stay inside the audible range
-        modulatedCutoff = juce::jlimit(20.0f, 20000.0f, modulatedCutoff);
-        setCutoffFrequencyHz(modulatedCutoff);
-        process(context);
-    }
-    
-    void setLfoAmt(const float newValue)
-    {
-        lfoAmt = newValue;
-    }
-    
-    void setCutoff(const float newValue)
-    {
-        cutoff = newValue;
-        setCutoffFrequencyHz(cutoff);
-    }
-    
-    void setEnvAmt(const float newValue)
-    {
-        egAmt = newValue;
-    }
-    
-private:
-    float lfoAmt = 0;
-    float egAmt = 0;
-    float cutoff;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LadderFilter)
-};
-
 class MoogFilter {
 public:
     MoogFilter(){};
@@ -186,10 +96,11 @@ private:
     int numOutputChannels = 0;
 };
 
+// wrapper class that helps utilize a MoogFilter per channel
 class MoogFilters {
 public:
     MoogFilters(){};
-    void prepareToPlay(double sr, int outputChannels)
+    void prepareToPlay(double sr)
     {
         filterL.prepareToPlay(sr, 1);
         filterR.prepareToPlay(sr, 1);
@@ -322,9 +233,11 @@ public:
         setFrequency(0.5);
     }
     
-    void processBlock(AudioBuffer<float>& buffer, const int numSamples)
+//    void processBlock(AudioBuffer<float>& buffer, const int numSamples)
+    void processBlock(AudioBuffer<float>& buffer, const int startSample, const int numSamples)
     {
-        dsp::AudioBlock<float> block{ buffer.getArrayOfWritePointers(), 1, (size_t)numSamples };
+//        dsp::AudioBlock<float> block{ buffer.getArrayOfWritePointers(), 1, (size_t)numSamples };
+        dsp::AudioBlock<float> block{ buffer.getArrayOfWritePointers(), 1, (size_t)startSample, (size_t)numSamples };
         dsp::ProcessContextReplacing<float> context{ block };
                 
         filters[0].process(context);
