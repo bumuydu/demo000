@@ -30,7 +30,6 @@ public:
 //    mixer.getNextAudioBlock(mixerBuffer, oscillatorBuffer, subBuffer, noiseBuffer, startSample, numSamples, sawOscs.getActiveOscs());
     void getNextAudioBlock(AudioBuffer<float>& mixerBuffer, AudioBuffer<float>& oscillatorBuffer, AudioBuffer<float>& subBuffer, AudioBuffer<float>& noiseBuffer, const int startSample, const int numSamples, const float velocity, const int activeOscs)
     {
-        DBG("IN MIXER.GETNEXTAUDIOBLOCK");
         // Volume proporzionale alla velocity
         for (int ch = 0; ch < 2; ++ch)
         {
@@ -49,9 +48,9 @@ public:
         }
     }
     
-    void applyMasterGainAndCopy(AudioBuffer<float>& outputBuffer, AudioBuffer<float>& mixerBuffer, const int startSample, const int numSamples)
+    void applyMasterGainAndCopy(AudioBuffer<float>& outputBuffer, AudioBuffer<float>& mixerBuffer,
+                                const int startSample, const int numSamples)
     {
-        DBG("IN MIXER.APPLYMASTER");
         for (int ch = 0; ch < 2; ++ch)
         {
             masterGain.applyGain(mixerBuffer.getWritePointer(ch) + startSample, numSamples);

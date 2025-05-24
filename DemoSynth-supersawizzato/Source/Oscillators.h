@@ -18,8 +18,7 @@ public:
         blit.prepareToPlay(spec1);
     }
     
-    void getNextAudioBlock(AudioBuffer<float>& outputBuffer,
-                           AudioBuffer<double>& frequencyBuffer,
+    void getNextAudioBlock(AudioBuffer<float>& outputBuffer, AudioBuffer<double>& frequencyBuffer,
                            int startSample, int numSamples)
     {
         int endSample = startSample + numSamples;
@@ -92,23 +91,18 @@ public:
         {
             frequencyBuffers[i].setSize(0, 0);
         }
-        
     }
 
-//    void startNote(int midiNoteNumber)
     void startNote(const double freq)
     {
         // if phase resetting is ON then set it to the selected value by the user
         if(phaseResetting)
             setSawsPhase(sawPhase, freq);
-        
-        // storing currentMidiNote for parameter changes related to the frequency
-//        currentMidiNote = midiNoteNumber;
-//        updateFreqs();
     }
     
     // the process method now with stereo width parameter that pans every oscillator
-    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer, const int startSampleOversampled, const int numSamplesOversampled)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& frequencyBuffer,
+                 const int startSampleOversampled, const int numSamplesOversampled)
     {
         auto* left = buffer.getWritePointer(0);
         auto* right = buffer.getWritePointer(1);
@@ -134,7 +128,8 @@ public:
 
             // use tmpPanBuffer to process the oscillators
             // then add its contents to the main buffer applying the pan on buffers
-            blitsOscs[i].getNextAudioBlock(tmpPanBuffer, frequencyBuffers[i], startSampleOversampled, numSamplesOversampled);
+            blitsOscs[i].getNextAudioBlock(tmpPanBuffer, frequencyBuffers[i],
+                                           startSampleOversampled, numSamplesOversampled);
         
             const float* tmp = tmpPanBuffer.getReadPointer(0);
             const int endSampleOs = startSampleOversampled + numSamplesOversampled;
@@ -168,11 +163,8 @@ public:
             {
                 for (int i = 1; i < activeOscs; i+=2)
                 {
-//                    frequencyBuffers[i].clear();
-//                    frequencyBuffers[i+1].clear();
                     // 1,2,3... for each pair
                     int pairIndex = (i + 1) / 2;
-//                    double detuneAmount = pow(cent, pairIndex);
                     // detuneAmount now shows the max. detune and as num. of saw increases the detune decreases
                     double detuneAmount = pow(cent, (double)pairIndex / numPairs);
                     
@@ -191,7 +183,6 @@ public:
             
             for (int i = 0; i < activeOscs; i+=2)
             {
-//                double detuneAmount = pow(cent, pairIndex);
                 int pairIndex = (i + 1) / 2;
                 double detuneAmount;
                 
@@ -226,14 +217,12 @@ public:
     {
         // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
         sawRegister = newValue - 2;
-//        updateFreqs();
     }
     
     void setDetune(const float newValue)
     {
         sawDetune = newValue;
         cent = pow(root, newValue);
-//        updateFreqs();
     }
     
     void setStereoWidth(const float newValue)
@@ -285,7 +274,7 @@ private:
     dsp::ProcessSpec spec;
 
     MoogOsc blitsOscs[MAX_SAW_OSCS];
-    int activeOscs; // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
+    int activeOscs;          // to obtain the JP8000 supersaw sound, 7 detuned oscillators must be used
     
     AudioBuffer<float> tmpPanBuffer;
     AudioBuffer<double> frequencyBuffers[MAX_SAW_OSCS];
@@ -320,7 +309,7 @@ public:
         noiseEnvelope.setSize(0, 0);
     }
     
-    void prepareToPlay(const dsp::ProcessSpec& spec/*double sampleRate, int samplesPerBlock*/)
+    void prepareToPlay(const dsp::ProcessSpec& spec)
     {
         // NOISE
         // We prepare the release envelope generator of the noise osc
@@ -359,8 +348,6 @@ public:
         }
     }
     
-    // setters & getters
-    
     void setRelease(const float newValue)
     {
         egNoise.setRelease(newValue);
@@ -375,7 +362,7 @@ public:
 private:
     float velocityLevel = 0.7f;
 
-//    // We use the JUCE class Random to generate noise
+    // We use the JUCE class Random to generate noise
     Random noise;
     AudioBuffer<float> noiseEnvelope;
     // envelope generator for the noise osc
@@ -428,7 +415,7 @@ public:
     }
 
 //    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
-    float getNextAudioBlock(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
+    float getNextAudioBlockOld(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
     {
         const int numCh = buffer.getNumChannels();
         auto data = buffer.getArrayOfWritePointers();
@@ -448,23 +435,30 @@ public:
         return getNextAudioSample();
     }
     
-    float getNextAudioBlockFloat(AudioBuffer<float>& buffer, const int startSample, const int numSamples)
+    void getNextAudioBlock(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
     {
-//        const int numCh = buffer.getNumChannels();
+        const int numCh = buffer.getNumChannels();
         auto data = buffer.getArrayOfWritePointers();
 
-        // numSamples - 1 because I return the last sample
         const int endSample = startSample + numSamples;
-        for (int smp = startSample; smp < endSample - 1; ++smp)
+        for (int smp = startSample; smp < endSample; ++smp)
         {
             const double sampleValue = getNextAudioSample();
 
-//            for (int ch = 0; ch < numCh; ++ch)
-//            {
-                data[0][smp] = sampleValue;
-//            }
+            for (int ch = 0; ch < numCh; ++ch)
+            {
+                data[ch][smp] = sampleValue;
+            }
         }
-        return getNextAudioSample();
+    }
+    
+    void getNextAudioBlockFloat(AudioBuffer<float>& buffer, const int startSample, const int numSamples)
+    {
+        auto data = buffer.getArrayOfWritePointers();
+
+        const int endSample = startSample + numSamples;
+        for (int smp = startSample; smp < endSample; ++smp)
+            data[0][smp] = getNextAudioSample();
     }
 
     float getNextAudioSample()

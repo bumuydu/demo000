@@ -84,8 +84,7 @@ public:
 	void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override
 	{
         // calculates the audio block and returns the last sample
-//        float lfoVal = lfo.getNextAudioBlock(modulation, numSamples);
-        float lfoVal = lfo.getNextAudioBlock(modulation, startSample, numSamples);
+        lfo.getNextAudioBlock(modulation, startSample, numSamples);
         
         frequencyModulation(startSample, numSamples);
         
@@ -121,7 +120,7 @@ public:
         
         // FILTERING - process the mixed buffer through a ladder filter
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
-        moogFilter.process(mixerBuffer, ampAdsr, lfoVal, startSample, numSamples);
+        moogFilter.process(mixerBuffer, ampAdsr, modulation, startSample, numSamples);
 
         // La modulo in ampiezza con l'ADSR
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, startSample, numSamples);

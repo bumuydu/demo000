@@ -25,9 +25,9 @@ public:
         antialiasingFilterR.coefficients = halfBandCoeffs;
     }
     
-    void filterAndDecimate(AudioBuffer<float>& oversmpBuf, AudioBuffer<float>& output, const int startSampleOs, const int numSamplesOs, const int oversamplingFactor)
+    void filterAndDecimate(AudioBuffer<float>& oversmpBuf, AudioBuffer<float>& output, const int startSampleOs,
+                           const int numSamplesOs, const int oversamplingFactor)
     {
-        DBG("IN OS.DECIMATE");
         auto* left = oversmpBuf.getWritePointer(0);
         auto* right = oversmpBuf.getWritePointer(1);
         auto* inL = oversmpBuf.getReadPointer(0);
