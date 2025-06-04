@@ -10,7 +10,6 @@
 
 #pragma once
 #include <JuceHeader.h>
-#include "PluginParameters.h"
 
 #define LEAKY_INTEGRATOR_BASE_FREQUENCY        8.0
 

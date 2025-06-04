@@ -39,6 +39,7 @@ public:
     bool isActive()
     {
         return (adsr1.isActive() && adsr2.isActive());
+//        return (adsr1.isActive() );
     }
     
     void prepareToPlay (const double newSampleRate)
@@ -78,9 +79,10 @@ public:
         setParameters(ampAdsrParams);
     }
     
-    float getNextSample()
+    float getNextSampleFilter()
     {
         return adsr1.getNextSample() * adsr2.getNextSample();
+//        return adsr1.getNextSample();
     }
     
 private:

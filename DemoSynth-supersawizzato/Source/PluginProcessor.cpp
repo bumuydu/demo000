@@ -1,4 +1,6 @@
 #include "PluginProcessor.h"
+#include "PluginParameters.h"
+#include "SupersawEditor.h"
 
 // Polifonia del mio sintetizzatore (numero di voci)
 #define NUM_VOICES 8
@@ -68,6 +70,18 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     // Lascio che la classe Synthsiser faccia le sue magie
     mySynth.renderNextBlock(buffer, midiMessages, 0, numSamples);
+}
+
+bool DemoSynthAudioProcessor::hasEditor() const
+{
+    return false;
+//    return true;
+}
+
+juce::AudioProcessorEditor* DemoSynthAudioProcessor::createEditor()
+{
+    return nullptr;
+//    return new SupersawEditor(*this, parameters);
 }
 
 //==============================================================================

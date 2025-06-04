@@ -31,9 +31,7 @@ public:
         auto* left = oversmpBuf.getWritePointer(0);
         auto* right = oversmpBuf.getWritePointer(1);
         auto* inL = oversmpBuf.getReadPointer(0);
-        auto* outL = output.getWritePointer(0);
         auto* inR = oversmpBuf.getReadPointer(1);
-        auto* outR = output.getWritePointer(1);
 
         const int endSampleOs = startSampleOs + numSamplesOs;
         // modify: if coefficients change dynamically --> reset
@@ -45,7 +43,10 @@ public:
             left[smp] = antialiasingFilterL.processSample(inL[smp]);
             right[smp] = antialiasingFilterR.processSample(inR[smp]);
         }
-
+        
+        auto* outL = output.getWritePointer(0);
+        auto* outR = output.getWritePointer(1);
+        
         // decimate
         const int startSampleOriginal = startSampleOs / oversamplingFactor;
         const int numSamplesOriginal = numSamplesOs / oversamplingFactor;
@@ -55,6 +56,12 @@ public:
             outL[i] = inL[i * oversamplingFactor];
             outR[i] = inR[i * oversamplingFactor];
         }
+    }
+    
+    void resetFilter()
+    {
+        antialiasingFilterL.reset();
+        antialiasingFilterR.reset();
     }
     
 private:

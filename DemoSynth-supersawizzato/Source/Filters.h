@@ -22,7 +22,7 @@ public:
         int endSample = startSample + numSamples;
         for (int smp = startSample; smp < endSample ; ++smp)
         {
-            float env = adsr.getNextSample();
+            float env = adsr.getNextSampleFilter();
             float lfoVal = lfo.getSample(0, smp);
             float envModInSemitones = env * egAmt * maxEnvModSemitones;
             float lfoModInSemitones = lfoVal * lfoAmt * maxLfoModSemitones;
@@ -216,12 +216,12 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ReleaseFilter)
 };
 
-class StereoFilter
+class NoiseFilter
 {
 public:
-    StereoFilter(){}
+    NoiseFilter(){}
     
-    ~StereoFilter(){}
+    ~NoiseFilter(){}
     
     void prepareToPlay(/*double sr, */const dsp::ProcessSpec& spec)
     {
@@ -275,5 +275,5 @@ private:
     static const int numFilters = 2;
     dsp::LadderFilter<float> filters[numFilters];
     
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StereoFilter)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NoiseFilter)
 };

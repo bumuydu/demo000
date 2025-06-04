@@ -147,61 +147,40 @@ public:
     // the frequencies of the rest of the oscillators have to be calculated
     // if numSaw odd --> then base is unchanged and the rest will be as before
     // if numSaw even --> then also the 1st oscillator's frequency will be detuned
+    // freqBuffer and all frequencyBuffers are in the OVERSAMPLED buffer size
     void setSawFreqs(AudioBuffer<double>& freqBuffer, const int startSampleOversampled, const int numSamplesOversampled)
     {
-        // freqBuffer and all frequencyBuffers are in the OVERSAMPLED buffer size
-        int endSampleOversampled = startSampleOversampled + numSamplesOversampled;
+        const int endSampleOversampled = startSampleOversampled + numSamplesOversampled;
+
         frequencyBuffers[0].copyFrom(0, startSampleOversampled, freqBuffer, 0, startSampleOversampled, numSamplesOversampled);
-        // odd
-        if (activeOscs % 2 != 0)
+
+        if (activeOscs < 2)
+            return;
+
+        const bool isOdd = activeOscs % 2 != 0;
+        const int numPairs = isOdd ? (activeOscs - 1) / 2 : activeOscs / 2;
+        const int startIndex = isOdd ? 1 : 0;
+
+        for (int i = startIndex; i < activeOscs; i += 2)
         {
-            int numPairs = (activeOscs - 1) / 2;
-            
-            // for main osc do nothing
-            // for the rest of the oscs --> detune them!
-            if (activeOscs > 1)
+            // 1,2,3... for each pair
+            const int pairIndex = (i + 1) / 2;
+            double detuneAmount;
+
+            // just two active oscs needs special case
+            if (!isOdd && numPairs == 1)
+                detuneAmount = pow(cent, 0.5);
+            else
+                detuneAmount = pow(cent, static_cast<double>(pairIndex) / numPairs);
+
+            for (int j = startSampleOversampled; j < endSampleOversampled; ++j)
             {
-                for (int i = 1; i < activeOscs; i+=2)
-                {
-                    // 1,2,3... for each pair
-                    int pairIndex = (i + 1) / 2;
-                    // detuneAmount now shows the max. detune and as num. of saw increases the detune decreases
-                    double detuneAmount = pow(cent, (double)pairIndex / numPairs);
-                    
-                    for (int j = startSampleOversampled; j < endSampleOversampled; ++j)
-                    {
-                        auto tmp = freqBuffer.getSample(0, j);
-                        frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
-                        frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
-                    }
-                }
-            }
-        }
-        else
-        {   // even
-            int numPairs = activeOscs / 2;
-            
-            for (int i = 0; i < activeOscs; i+=2)
-            {
-                int pairIndex = (i + 1) / 2;
-                double detuneAmount;
-                
-                // just two active oscs needs special case
-                if (numPairs == 1)
-                    detuneAmount = pow(cent, 0.5);
-                else
-                    detuneAmount = pow(cent, (double)pairIndex / numPairs);
-            
-                for (int j = startSampleOversampled; j < endSampleOversampled; ++j)
-                {
-                    auto tmp = freqBuffer.getSample(0, j);
-                    frequencyBuffers[i].setSample(0, j, tmp * detuneAmount);
-                    frequencyBuffers[i+1].setSample(0, j, tmp / detuneAmount);
-                }
+                const double sample = freqBuffer.getSample(0, j);
+                frequencyBuffers[i].setSample(0, j, sample * detuneAmount);
+                frequencyBuffers[i + 1].setSample(0, j, sample / detuneAmount);
             }
         }
     }
-
     
     // SETTERS, GETTERS AND MISC.
     

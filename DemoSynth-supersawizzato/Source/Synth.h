@@ -6,6 +6,8 @@
 #include "Mixer.h"
 #include "Oversampling.h"
 
+#define VELOCITY_DYN_RANGE 9.0f  //dB;
+
 class MySynthSound : public SynthesiserSound
 {
 public:
@@ -51,9 +53,16 @@ public:
 
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
 	{
+//        oversmpBuffer.clear();
+//        oscillatorBuffer.clear();
+//        subBuffer.clear();
+//        noiseBuffer.clear();
+//        mixerBuffer.clear();
+        
 		// Reset phase for each oscillator
         subOscillator.resetPhase();
         sawOscs.startNote(nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1));
+        oSmp.resetFilter(); // modify: delete if not needed
         
         // storing currentMidiNote for parameter changes related to the frequency
         noteNumber.setTargetValue(midiNoteNumber);
@@ -62,7 +71,8 @@ public:
 
 		// Trigger the ADSR
 		ampAdsr.noteOn();
-		velocityLevel = velocity;
+        velocityLevel = Decibels::decibelsToGain(velocity * VELOCITY_DYN_RANGE - VELOCITY_DYN_RANGE);
+//		velocityLevel = velocity;
 //        mixer.updateGain();
         trigger = true;
 	}
@@ -83,7 +93,6 @@ public:
 
 	void renderNextBlock(AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override
 	{
-        // calculates the audio block and returns the last sample
         lfo.getNextAudioBlock(modulation, startSample, numSamples);
         
         frequencyModulation(startSample, numSamples);
@@ -122,7 +131,6 @@ public:
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
         moogFilter.process(mixerBuffer, ampAdsr, modulation, startSample, numSamples);
 
-        // La modulo in ampiezza con l'ADSR
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, startSample, numSamples);
          
         mixer.applyMasterGainAndCopy(outputBuffer, mixerBuffer, startSample, numSamples);
@@ -392,7 +400,7 @@ private:
     
     // filters
     MoogFilters moogFilter;             // LPF for the whole synth
-    StereoFilter noiseFilter;           // filter for noise
+    NoiseFilter noiseFilter;           // filter for noise
     float egAmt = 0.0f;
     
     // buffers
