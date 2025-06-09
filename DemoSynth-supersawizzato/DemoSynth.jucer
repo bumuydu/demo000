@@ -15,6 +15,26 @@
       <FILE id="qilZQG" name="PluginParameters.h" compile="0" resource="0"
             file="Source/PluginParameters.h"/>
       <GROUP id="{0FDD39A7-9CA9-DDBC-1431-EA5E5440A394}" name="GUI">
+        <FILE id="wzdOpY" name="2.png" compile="0" resource="1" file="Resources/images/2.png"
+              xcodeResource="1"/>
+        <FILE id="bTHJwr" name="3.png" compile="0" resource="1" file="Resources/images/3.png"
+              xcodeResource="1"/>
+        <FILE id="jlQHP5" name="5.png" compile="0" resource="1" file="Resources/images/5.png"
+              xcodeResource="1"/>
+        <FILE id="SgC3Nt" name="6.png" compile="0" resource="1" file="Resources/images/6.png"
+              xcodeResource="1"/>
+        <FILE id="VNqx4T" name="7.png" compile="0" resource="1" file="Resources/images/7.png"
+              xcodeResource="1"/>
+        <FILE id="UbXEL2" name="1.png" compile="0" resource="1" file="Resources/images/1.png"
+              xcodeResource="1"/>
+        <FILE id="erAcAA" name="4.png" compile="0" resource="1" file="Resources/images/4.png"
+              xcodeResource="1"/>
+        <FILE id="lZp9yH" name="sine.png" compile="0" resource="1" file="Resources/images/sine.png"
+              xcodeResource="1"/>
+        <FILE id="Gwt0lS" name="shsmooth.png" compile="0" resource="1" file="Resources/images/shsmooth.png"
+              xcodeResource="1"/>
+        <FILE id="iuPkaR" name="shstep.png" compile="0" resource="1" file="Resources/images/shstep.png"
+              xcodeResource="1"/>
         <FILE id="oyWNkg" name="SupersawEditor.h" compile="0" resource="0"
               file="Source/SupersawEditor.h"/>
         <FILE id="XFmhhb" name="SupersawEditor.cpp" compile="1" resource="0"

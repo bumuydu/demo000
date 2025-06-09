@@ -31,7 +31,10 @@ private:
     void setupSlider(Slider& slider, int x, int y, int w, int h);
     void setupHorizontalSlider(Slider& slider, int x, int y, int w, int h);
     void setupToggle(ToggleButton& button, int x, int y, int w, int h);
-
+    void loadWaveIcons();
+    
+    Image waveIcons[7];
+    
     DemoSynthAudioProcessor& audioProcessor;
     AudioProcessorValueTreeState& valueTreeState;
         

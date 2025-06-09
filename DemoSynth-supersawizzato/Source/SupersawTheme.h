@@ -158,7 +158,7 @@ public:
         // --- Draw ticks (22 total) on the left side
         const int numTicks = 22;
         const float tickLength = 6.0f;
-        const float tickX = static_cast<float>(x) + 2.0f; // slightly inside left padded area
+        const float tickX = static_cast<float>(x) + 0.1f;
 
         g.setColour(juce::Colour(0xFFf0f1f1)); // better white
 
@@ -166,7 +166,7 @@ public:
         {
             float proportion = static_cast<float>(i) / (numTicks - 1);
             float yPos = fy + (1.0f - proportion) * fheight;
-            g.drawLine(tickX, yPos, tickX + tickLength, yPos, 2.0f); // thicker tick
+            g.drawLine(tickX, yPos, tickX + tickLength, yPos, 1.8f);
         }
 
         // --- Draw left shadow panel
@@ -250,7 +250,23 @@ public:
         auto ledRadius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 4.0f;
         juce::Point<float> center = bounds.getCentre();
         juce::Rectangle<float> ledBounds(center.x - ledRadius, center.y - ledRadius, ledRadius * 2.0f, ledRadius * 2.0f);
-
+        
+        // glow
+        if (button.getToggleState())
+        {
+            juce::Colour glowColour = juce::Colour::fromRGBA(255, 0, 0, 40);
+            for (int i = 1; i <= 3; ++i)
+            {
+                float glowScale = 1.0f + i * 0.4f;
+                juce::Rectangle<float> glowBounds = ledBounds.withSizeKeepingCentre(
+                    ledBounds.getWidth() * glowScale,
+                    ledBounds.getHeight() * glowScale);
+                g.setColour(glowColour.withAlpha(0.1f * (4 - i))); // fading glow
+                g.fillEllipse(glowBounds);
+            }
+        }
+        
+        
         juce::Colour ledColour = button.getToggleState() ? juce::Colour(0xFFa00b0b) : juce::Colours::black;
 
         g.setColour(ledColour);
