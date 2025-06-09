@@ -27,18 +27,21 @@ public:
 
 private:
 
+    void setupKnob(Slider& slider, int x, int y, int w, int h);
     void setupSlider(Slider& slider, int x, int y, int w, int h);
+    void setupHorizontalSlider(Slider& slider, int x, int y, int w, int h);
+    void setupToggle(ToggleButton& button, int x, int y, int w, int h);
 
     DemoSynthAudioProcessor& audioProcessor;
     AudioProcessorValueTreeState& valueTreeState;
-    SupersawLookAndFeel supersawTheme;
         
     Slider mainWaveformSlider;
     Slider mainRegisterSlider;
     Slider numSawsSlider;
     Slider detuneSlider;
     Slider stereoWidthSlider;
-    Slider phaseResettingSlider;
+//    Slider phaseResettingSlider;
+    ToggleButton phaseResettingToggle;
     Slider phaseSlider;
     Slider subRegSlider;
     Slider subWaveformSlider;
@@ -52,7 +55,8 @@ private:
     Slider lfoAmtSlider;
     Slider lfoFreqSlider;
     Slider lfoRateSlider;
-    Slider lfoSyncSlider;
+//    Slider lfoSyncSlider;
+    ToggleButton lfoSyncToggle;
     Slider attackSlider;
     Slider decaySlider;
     Slider sustainSlider;
@@ -60,15 +64,17 @@ private:
     Slider noiseReleaseSlider;
     Slider noiseColorSlider;
     Slider oversamplingSlider;
-    Slider masterSlider;
-
+    Slider masterSlider;    
+    
+    SupersawLookAndFeel supersawTheme;
 
     std::unique_ptr<SliderAttachment> mainWfAtttachment;
     std::unique_ptr<SliderAttachment> mainRegAtttachment;
     std::unique_ptr<SliderAttachment> numSawsAtttachment;
     std::unique_ptr<SliderAttachment> detuneAtttachment;
     std::unique_ptr<SliderAttachment> stereoWidthAtttachment;
-    std::unique_ptr<SliderAttachment> phaseResettingAtttachment;
+//    std::unique_ptr<SliderAttachment> phaseResettingAtttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phaseResettingAtttachment;
     std::unique_ptr<SliderAttachment> phaseAtttachment;
     std::unique_ptr<SliderAttachment> subRegAtttachment;
     std::unique_ptr<SliderAttachment> subWfAtttachment;
@@ -82,7 +88,8 @@ private:
     std::unique_ptr<SliderAttachment> lfoAmtAtttachment;
     std::unique_ptr<SliderAttachment> lfoFreqAtttachment;
     std::unique_ptr<SliderAttachment> lfoRateAtttachment;
-    std::unique_ptr<SliderAttachment> lfoSyncAtttachment;
+//    std::unique_ptr<SliderAttachment> lfoSyncAtttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lfoSyncAttachment;
     std::unique_ptr<SliderAttachment> attackAtttachment;
     std::unique_ptr<SliderAttachment> decayAtttachment;
     std::unique_ptr<SliderAttachment> sustainAtttachment;
@@ -91,7 +98,6 @@ private:
     std::unique_ptr<SliderAttachment> noiseColorAtttachment;
     std::unique_ptr<SliderAttachment> oversamplingAtttachment;
     std::unique_ptr<SliderAttachment> masterAtttachment;
-
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SupersawEditor)
 };

@@ -59,7 +59,7 @@ namespace Parameters
     static const int defaultPhase = 0;
     static const int defaultPhaseDegree = 0;
     static const int defaultMainWf = 0;
-    static const int defaultSubReg = 0;
+    static const int defaultSubReg = 2; // in this case, it sets the default register to -1
     static const int defaultSubWf = 0;
     static const int defaultLfoWf = 0;
     static const int defaultLfoSync = 0;
@@ -77,7 +77,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameStereoWidth, 5 }, "Stereo Width", NormalisableRange<float>(0.0f, 1.0f), defaultStereoWidth));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { namePhase, 6 }, "Phase Resetting", StringArray{"OFF","ON"}, defaultPhase));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { namePhaseDegree, 7 }, "Phase (degrees)", 0, 360, defaultPhaseDegree));
-        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubReg, 8 }, "Sub Register", StringArray{"0","-1","-2"}, defaultSubReg));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubReg, 8 }, "Sub Register", StringArray{"-3","-2","-1"}, defaultSubReg));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSubWf, 9 }, "Sub Waveform", StringArray{"Sinusoidal","Square"}, defaultSubWf));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSawLev, 10 }, "Saw Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), defaultSaw));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameSubLev, 11 }, "Sub Level (dB)", NormalisableRange<float>(dbFloor, 6.0f, 0.1f), dbFloor));

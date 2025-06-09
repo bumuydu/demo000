@@ -26,7 +26,7 @@ class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
 	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f,
-                     int defaultSubReg = 0, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
+                     int defaultSubReg = 2, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
     : sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), subRegister(defaultSubReg), egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)
 	{
 	};
@@ -95,6 +95,7 @@ public:
 	{
         lfo.getNextAudioBlock(modulation, startSample, numSamples);
         
+        // modify: I might move this to after the initial return
         frequencyModulation(startSample, numSamples);
         
 		if (!isVoiceActive())
@@ -353,7 +354,7 @@ private:
     void updateFreqs()
     {
         double baseFreq = nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1);
-        double subFreq = baseFreq / std::pow(2, subRegister + 3);
+        double subFreq = baseFreq / std::pow(2, 5 - subRegister);
         subOscillator.setFrequency(subFreq);
     }
     

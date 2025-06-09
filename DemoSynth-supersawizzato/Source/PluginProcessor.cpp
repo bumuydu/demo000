@@ -74,14 +74,14 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
 bool DemoSynthAudioProcessor::hasEditor() const
 {
-    return false;
-//    return true;
+//    return false;
+    return true;
 }
 
 juce::AudioProcessorEditor* DemoSynthAudioProcessor::createEditor()
 {
-    return nullptr;
-//    return new SupersawEditor(*this, parameters);
+//    return nullptr;
+    return new SupersawEditor(*this, parameters);
 }
 
 //==============================================================================

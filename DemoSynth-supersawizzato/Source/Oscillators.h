@@ -394,6 +394,7 @@ public:
     }
 
 //    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
+// modify: delete this if it isn't being used
     float getNextAudioBlockOld(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
     {
         const int numCh = buffer.getNumChannels();
