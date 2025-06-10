@@ -15,6 +15,14 @@
       <FILE id="qilZQG" name="PluginParameters.h" compile="0" resource="0"
             file="Source/PluginParameters.h"/>
       <GROUP id="{0FDD39A7-9CA9-DDBC-1431-EA5E5440A394}" name="GUI">
+        <FILE id="xwX5ec" name="cutoff2.png" compile="0" resource="1" file="Resources/images/cutoff2.png"
+              xcodeResource="1"/>
+        <FILE id="gmtK8N" name="cutoff.png" compile="0" resource="1" file="Resources/images/cutoff.png"
+              xcodeResource="1"/>
+        <FILE id="Sa1lEA" name="env1.png" compile="0" resource="1" file="Resources/images/env1.png"
+              xcodeResource="1"/>
+        <FILE id="E90pOA" name="env2.png" compile="0" resource="1" file="Resources/images/env2.png"
+              xcodeResource="1"/>
         <FILE id="wzdOpY" name="2.png" compile="0" resource="1" file="Resources/images/2.png"
               xcodeResource="1"/>
         <FILE id="bTHJwr" name="3.png" compile="0" resource="1" file="Resources/images/3.png"
@@ -36,7 +44,7 @@
         <FILE id="iuPkaR" name="shstep.png" compile="0" resource="1" file="Resources/images/shstep.png"
               xcodeResource="1"/>
         <FILE id="oyWNkg" name="SupersawEditor.h" compile="0" resource="0"
-              file="Source/SupersawEditor.h"/>
+              file="Source/SupersawEditor.h" xcodeResource="0"/>
         <FILE id="XFmhhb" name="SupersawEditor.cpp" compile="1" resource="0"
               file="Source/SupersawEditor.cpp"/>
         <FILE id="Jn4nbV" name="SupersawTheme.h" compile="0" resource="0" file="Source/SupersawTheme.h"/>

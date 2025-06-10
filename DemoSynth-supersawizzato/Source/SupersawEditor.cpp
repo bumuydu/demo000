@@ -18,36 +18,41 @@
 SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueTreeState& vts)
     : AudioProcessorEditor (&p), audioProcessor (p), valueTreeState(vts)
 {
-    setupKnob(mainWaveformSlider,      75,  47, 85, 85);
-    setupKnob(mainRegisterSlider,     215,  47, 85, 85);
-    setupKnob(numSawsSlider,           75, 147, 85, 85);
-    setupKnob(detuneSlider,           215, 147, 85, 85);
-    setupKnob(phaseSlider,             75, 247, 85, 85);
-    setupKnob(stereoWidthSlider,      215, 247, 85, 85);
-    setupToggle(phaseResettingToggle,  40, 290, 30, 30);
-    setupKnob(subRegSlider,            75, 400, 85, 85);
-    setupKnob(subWaveformSlider,      215, 400, 85, 85);
+    mainWaveformSlider.setName("wf");
+    lfoWaveformSlider.setName("wf2");
+    
+    setupKnob(mainWaveformSlider,      77,  54, 75, 75);
+    setupKnob(mainRegisterSlider,     217,  58, 75, 75);
+    setupKnob(numSawsSlider,           77, 158, 75, 75);
+    setupKnob(detuneSlider,           217, 158, 75, 75);
+    setupKnob(phaseSlider,             77, 254, 75, 75);
+    setupKnob(stereoWidthSlider,      217, 254, 75, 75);
+    setupToggle(phaseResettingToggle,  45, 292, 30, 30);
+    setupKnob(subRegSlider,            77, 408, 75, 75);
+    setupSlider(subWaveformSlider,    205, 408, 85, 85);
     setupSlider(sawLevelSlider,       380,  70, 60, 260);
     setupSlider(subLevelSlider,       450,  70, 60, 260);
     setupSlider(noiseLevelSlider,     520,  70, 60, 260);
-    setupKnob(noiseReleaseSlider,     385, 400, 85, 85);
-    setupKnob(noiseColorSlider,       490, 400, 85, 85);
+    setupKnob(noiseReleaseSlider,     385, 408, 75, 75);
+    setupKnob(noiseColorSlider,       490, 408, 75, 75);
     setupKnob(cutoffSlider,           640,  60, 120, 120);
-    setupKnob(qualitySlider,          660, 190, 85, 85);
-    setupKnob(lfoAmtSlider,           660, 295, 85, 85);
-    setupKnob(egAmtSlider,            660, 400, 85, 85);
-    setupKnob(lfoWaveformSlider,      830,  70, 85, 85);
-    setupKnob(lfoFreqSlider,          830, 180, 85, 85);
-    setupKnob(lfoRateSlider,          830, 180, 85, 85);
-    setupToggle(lfoSyncToggle,        800, 215, 30, 30);
+    setupKnob(qualitySlider,          662, 198, 75, 75);
+    setupKnob(lfoAmtSlider,           662, 303, 75, 75);
+    setupKnob(egAmtSlider,            662, 408, 75, 75);
+    setupKnob(lfoWaveformSlider,      832,  70, 75, 75);
+    setupKnob(lfoFreqSlider,          832, 188, 75, 75);
+    setupKnob(lfoRateSlider,          832, 188, 75, 75);
+    setupToggle(lfoSyncToggle,        802, 228, 30, 30);
     setupSlider(attackSlider,         980,  70, 45, 200);
     setupSlider(decaySlider,         1035,  70, 45, 200);
     setupSlider(sustainSlider,       1090,  70, 45, 200);
     setupSlider(releaseSlider,       1145,  70, 45, 200);
-    setupKnob(masterSlider,          1115, 320, 85, 85);
-    setupKnob(oversamplingSlider,    1100, 390, 80, 30);
+    setupKnob(masterSlider,          1112, 328, 75, 75);
+    setupSlider(oversamplingSlider,  1110, 400, 80, 70);
+
 
 //    setupHorizontalSlider(oversamplingSlider, 1120, 380, 80, 30);
+    
     
     // hide bpm synchronised lfo rate
     lfoRateSlider.setVisible(false);
@@ -84,6 +89,13 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     oversamplingAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameOversampling, oversamplingSlider));
     masterAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameMaster, masterSlider));
     
+    subWaveformSlider.setSliderStyle(Slider::LinearHorizontal);
+    subWaveformSlider.setRange(0, 1, 1);  // only values 0 or 1
+//    subWaveformSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
+    oversamplingSlider.setSliderStyle(Slider::LinearHorizontal);
+    oversamplingSlider.setRange(0, 1, 1);  // only values 0 or 1
+//    oversamplingSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
+    
     lfoSyncToggle.onClick = [this]()
     {
         const bool syncOn = lfoSyncToggle.getToggleState();
@@ -93,6 +105,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     };
     
     loadWaveIcons();
+    loadWaveIcons2();
     
     this->setLookAndFeel(&supersawTheme);
 
@@ -133,7 +146,7 @@ void SupersawEditor::paint (juce::Graphics& g)
     drawPanel({620, 20, 160, 480}, juce::Colour(0xFF1C2531)); // FILTER
     drawPanel({800, 20, 140, 260}, juce::Colour(0xFF1C2531)); // LFO
     drawPanel({960, 20, 250, 260}, juce::Colour(0xFF1C2531)); // ENV
-    drawPanel({1100, 300, 110, 110}, juce::Colour(0xff2b2d31)); // MASTER
+    drawPanel({1090, 300, 120, 155}, juce::Colour(0xff2b2d31)); // MASTER
     
     // panel labels
     {
@@ -167,70 +180,52 @@ void SupersawEditor::paint (juce::Graphics& g)
 //        g.setFont(juce::Font::bold);
         g.setFont(juce::Font("Lato", 13.0f, juce::Font::plain));
         g.setColour(juce::Colour(0xFFf0f1f1));
-        g.drawFittedText("Waveform",         75,  27, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Register",         215, 27, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("# of Saws",        75, 127, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Detune",           215, 127, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase",            75, 227, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Stereo Width",     215, 227, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase Reset",       40, 270, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sub Reg",           75, 380, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sub Waveform",     215, 380, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Waveform",         72,  42, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Register",         212, 37, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("# of Saws",        72, 138, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Detune",           212, 138, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase",            72, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Stereo Width",     212, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase",            45, 259, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Reset",            45, 272, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Sub Reg",           72, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Sub Waveform",     208, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Saw",             380,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Sub",             450,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Noise",           520,  50, 60, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Noise Release",   385, 380, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Noise Color",     490, 380, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Noise Release",   382, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Noise Color",     487, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Cutoff",          640,  45, 120, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Quality",         660, 170, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("LFO Amt",         660, 275, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("EG Amt",          660, 380, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("LFO Waveform",    830,  50, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("LFO Freq/Rate",   830, 160, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sync",            800, 195, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Attack",          980,  50, 45, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Decay",          1035,  50, 45, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sustain",        1090,  50, 45, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Release",        1145,  50, 45, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Master",         1115, 300, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Oversampling",   1100, 370, 80, 20, juce::Justification::centred, 1);
-//        g.drawText("MASTER", 1120, 300, 100, 20, juce::Justification::left);
+        g.drawFittedText("Quality",         657, 178, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("LFO Amt",         657, 283, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("EG Amt",          657, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("LFO Waveform",    827,  45, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("LFO Freq/Rate",   827, 168, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("BPM",            802, 195, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Sync",            802, 208, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Attack",          980,  45, 45, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Decay",          1035,  45, 45, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Sustain",        1090,  45, 45, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Release",        1145,  45, 45, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Master",         1107, 308, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Oversampling",   1110, 400, 80, 20, juce::Justification::centred, 1);
     }
     
-    // main waveforms
-//    setupKnob(mainWaveformSlider,      x=75,  y=47, w=85, h=85);
-    const float cx = 75+42;
-    const float cy = 47+42;
-    const float radius = 85 * 0.5f;
-    const float iconSize = 5.0f;
-
-    for (int i = 0; i < 7; ++i)
-    {
-        if (waveIcons[i].isValid())
-        {
-            
-            const float angle = juce::MathConstants<float>::pi * (5.0f / 4.0f - i * (1.5f / 6.0f));
-            const float iconX = cx + radius * std::cos(angle) - iconSize * 0.5f;
-            const float iconY = cy + radius * std::sin(angle) - iconSize * 0.5f;
-
-            g.drawImage(waveIcons[i], iconX, iconY, iconSize, iconSize,
-                        0, 0, waveIcons[i].getWidth(), waveIcons[i].getHeight());
-        }
-        else
-            DBG("icons not valid");
-    }
+    // draw waveform details
+    drawWaveforms(g);
+    
     
     // title
     {
         g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold));
         g.setColour(juce::Colours::white);
-        g.drawFittedText("Super-super", getWidth() - 330, getHeight() - 60, 300, 40, juce::Justification::centredRight, 1);
+        g.drawFittedText("Supercore", getWidth() - 330, getHeight() - 50, 300, 40, juce::Justification::centredRight, 1);
     }
     {
         // author
-        g.setFont(14.0f);
+        g.setFont(juce::Font("Lato", 14.0f, juce::Font::plain));
         g.setColour(juce::Colours::lightgrey);
-        g.drawText("Coded at LIM by Derin Donmez", getWidth() - 330, getHeight() - 80, 300, 20, juce::Justification::centredRight);
+        g.drawText("Coded at LIM by Derin Donmez", getWidth() - 330, getHeight() - 60, 300, 20, juce::Justification::centredRight);
     }
 }
 
@@ -278,31 +273,16 @@ void SupersawEditor::setupToggle(ToggleButton& button, int x, int y, int w, int 
 //    slider.setBounds(x, y, w, h);
 //}
 
-//void SupersawEditor::loadWaveIcons()
-//{
-//    for (int i = 0; i < 7; ++i)
-//    {
-//        auto imageStream = juce::File::getCurrentWorkingDirectory()
-//                           .getChildFile("Resources")
-//                           .getChildFile("images")
-//                           .getChildFile(juce::String(i + 1) + ".png")
-//                           .createInputStream();
-//
-//        if (imageStream != nullptr)
-//            waveIcons[i] = juce::PNGImageFormat().decodeImage(*imageStream);
-//    }
-//}
-
 void SupersawEditor::loadWaveIcons()
 {
-    auto baseDir = juce::File::getSpecialLocation(juce::File::currentExecutableFile)
-                       .getParentDirectory()
-                       .getChildFile("Resources")
-                       .getChildFile("images");
+    auto imagesDir = juce::File::getSpecialLocation(juce::File::invokedExecutableFile)
+                         .getParentDirectory()   // MacOS/
+                         .getParentDirectory()   // Contents/
+                         .getChildFile("Resources");
 
     for (int i = 0; i < 7; ++i)
     {
-        auto imageFile = baseDir.getChildFile(juce::String(i + 1) + ".png");
+        auto imageFile = imagesDir.getChildFile(juce::String(i + 1) + ".png");
 
         if (imageFile.existsAsFile())
         {
@@ -327,4 +307,151 @@ void SupersawEditor::loadWaveIcons()
             DBG("Image file does not exist: " + imageFile.getFullPathName());
         }
     }
+}
+
+void SupersawEditor::loadWaveIcons2()
+{
+    auto imagesDir = juce::File::getSpecialLocation(juce::File::invokedExecutableFile)
+                         .getParentDirectory()   // MacOS/
+                         .getParentDirectory()   // Contents/
+                         .getChildFile("Resources");
+
+    juce::StringArray filenames = { "sine.png", "3.png", "4.png", "5.png", "env1.png", "env2.png", "cutoff.png", "cutoff2.png" };
+
+    for (int i = 0; i < filenames.size(); ++i)
+    {
+        auto imageFile = imagesDir.getChildFile(filenames[i]);
+
+        if (imageFile.existsAsFile())
+        {
+            std::unique_ptr<juce::InputStream> stream(imageFile.createInputStream());
+
+            if (stream != nullptr)
+            {
+                auto img = juce::PNGImageFormat().decodeImage(*stream);
+
+                if (img.isValid())
+                    waveIcons2[i] = img;
+                else
+                    DBG("Failed to decode image: " + imageFile.getFullPathName());
+            }
+            else
+            {
+                DBG("Failed to create input stream for: " + imageFile.getFullPathName());
+            }
+        }
+        else
+        {
+            DBG("Image file does not exist: " + imageFile.getFullPathName());
+        }
+    }
+}
+
+
+void SupersawEditor::drawWaveforms(Graphics& g)
+{
+    const float cx = 77.0f + 75.0f * 0.5f;
+    const float cy = 54.0f + 75.0f * 0.5f;
+    const float radius = 75 * 0.5f;
+    const float iconSize = 13.0f;
+
+    for (int i = 0; i < 7; ++i)
+    {
+        if (waveIcons[i].isValid())
+        {
+            // Start at bottom-left (135°), end at bottom-right (45°), moving clockwise
+//            const float startAngle = 3.0f * juce::MathConstants<float>::pi / 4.0f; // 135°
+//            const float endAngle   = 9.0f * juce::MathConstants<float>::pi / 4.0f;       // 45°
+            float startAngle = juce::MathConstants<float>::pi * 0.70f;
+            float endAngle = juce::MathConstants<float>::pi * 2.30f;
+            const float angleStep  = (endAngle - startAngle) / 6.0f; // 6 steps between 7 points
+
+            const float angle = startAngle + i * angleStep;
+
+            // --- Tick position
+            const float tickDistance = radius - 8.0f;
+            const float tickLength = 4.0f;
+
+            const float tickX = cx + tickDistance * std::cos(angle);
+            const float tickY = cy + tickDistance * std::sin(angle);
+
+            const float tickEndX = tickX + tickLength * std::cos(angle);
+            const float tickEndY = tickY + tickLength * std::sin(angle);
+
+            g.setColour(juce::Colour(0xFFf0f1f1));
+            g.drawLine(tickX, tickY, tickEndX, tickEndY, 1.8f);
+
+            const float iconDistance = radius * 1.20f;
+            const float iconX = cx + iconDistance * std::cos(angle) - iconSize * 0.5f;
+            const float iconY = cy + iconDistance * std::sin(angle) - iconSize * 0.5f;
+
+
+            g.drawImage(waveIcons[i], iconX, iconY, iconSize, iconSize,
+                        0, 0, waveIcons[i].getWidth(), waveIcons[i].getHeight());
+        }
+        else
+        {
+            DBG("icons not valid");
+        }
+    }
+
+    // lfo waveforms
+    const float cx2 = 832.0f + 75.0f * 0.5f;
+    const float cy2 = 70.0f + 75.0f * 0.5f;
+    const float radius2 = 75 * 0.5f;
+    const float iconSize2 = 13.0f;
+
+    // Custom order: sine, 3, 4, 5
+    // Assuming waveIcons2 is an array of 4 juce::Image objects in this order
+    for (int i = 0; i < 4; ++i)
+    {
+        if (waveIcons2[i].isValid())
+        {
+            // Adjust angles for 4 points spread nicely around the knob, e.g. from 135° to 45°
+            // Let's use the same arc but split into 3 steps between 4 points:
+            float startAngle2 = juce::MathConstants<float>::pi * 0.70f;  // ~126°
+            float endAngle2 = juce::MathConstants<float>::pi * 2.30f;    // ~414°
+            const float angleStep2 = (endAngle2 - startAngle2) / 3.0f;  // 3 steps for 4 points
+
+            const float angle2 = startAngle2 + i * angleStep2;
+
+            // Tick position
+            const float tickDistance2 = radius2 - 8.0f;
+            const float tickLength2 = 4.0f;
+
+            const float tickX2 = cx2 + tickDistance2 * std::cos(angle2);
+            const float tickY2 = cy2 + tickDistance2 * std::sin(angle2);
+
+            const float tickEndX2 = tickX2 + tickLength2 * std::cos(angle2);
+            const float tickEndY2 = tickY2 + tickLength2 * std::sin(angle2);
+
+            g.setColour(juce::Colour(0xFFf0f1f1));
+            g.drawLine(tickX2, tickY2, tickEndX2, tickEndY2, 1.8f);
+
+            // Icon position
+            const float iconDistance2 = radius2 * 1.20f;
+            const float iconX2 = cx2 + iconDistance2 * std::cos(angle2) - iconSize2 * 0.5f;
+            const float iconY2 = cy2 + iconDistance2 * std::sin(angle2) - iconSize2 * 0.5f;
+
+
+            g.drawImage(waveIcons2[i], iconX2, iconY2, iconSize2, iconSize2,
+                        0, 0, waveIcons2[i].getWidth(), waveIcons2[i].getHeight());
+        }
+        else
+        {
+            DBG("waveIcons2[" << i << "] not valid");
+        }
+    }
+    
+    // sub waveforms
+    g.drawImage(waveIcons2[0], 218, 413, 20.0f, 18.0f, 0, 0, waveIcons2[0].getWidth(), waveIcons2[0].getHeight());
+    g.drawImage(waveIcons[5], 258, 413, 20.0f, 18.0f, 0, 0, waveIcons[5].getWidth(), waveIcons[5].getHeight());
+    
+    // envelopes for the filter egAmtSlider: 660, 400, 85, 85);
+    g.drawImage(waveIcons2[5], 645, 460, 20.0f, 20.0f, 0, 0, waveIcons2[5].getWidth(), waveIcons2[5].getHeight());
+    g.drawImage(waveIcons2[4], 730, 460, 20.0f, 20.0f, 0, 0, waveIcons2[4].getWidth(), waveIcons2[4].getHeight());
+    
+    // noise cutoff image       490, 400, 85, 85)
+    g.drawImage(waveIcons2[6], 470, 465, 25.0f, 12.5f, 0, 0, waveIcons2[6].getWidth(), waveIcons2[6].getHeight());
+    g.drawImage(waveIcons2[7], 560, 465, 25.0f, 12.5f, 0, 0, waveIcons2[7].getWidth(), waveIcons2[7].getHeight());
 }

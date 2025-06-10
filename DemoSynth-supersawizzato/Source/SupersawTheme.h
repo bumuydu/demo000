@@ -23,7 +23,6 @@ public:
     }
     ~SupersawLookAndFeel() {}
 
-    // prendo tutto questo dal documentazione. metto override e il nome slider
     void drawRotarySlider(Graphics& g, int x, int y, int width, int height,
             float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, Slider& slider) override
     {
@@ -87,38 +86,78 @@ public:
         g.setColour(juce::Colours::darkgrey);
         g.drawEllipse(knobX, knobY, radius * 2.0f, radius * 2.0f, 1.0f);
 
-        // ticks
-        int numTicks = 22;
-        float tickRadius = radius + 4.0f;
-        float tickLength = 4.0f;
-        float tickWidth = 1.8f;
-
-        float tickStartAngle = juce::MathConstants<float>::pi * 0.70f;
-        float tickEndAngle = juce::MathConstants<float>::pi * 2.30f;
-
-        g.setColour(juce::Colours::lightgrey);
-
-        for (int i = 0; i < numTicks; ++i)
+        // don't draw these ticks if they are wf or lfo wf
+        if (slider.getName() != "wf" && slider.getName() != "wf2" )
         {
-            float proportion = i / float(numTicks - 1);
-            float tickAngle = tickStartAngle + proportion * (tickEndAngle - tickStartAngle);
-            float sinA = std::sin(tickAngle);
-            float cosA = std::cos(tickAngle);
-
-            float startX = centreX + cosA * tickRadius;
-            float startY = centreY + sinA * tickRadius;
-            float endX = centreX + cosA * (tickRadius + tickLength);
-            float endY = centreY + sinA * (tickRadius + tickLength);
-
-            g.drawLine(startX, startY, endX, endY, tickWidth);
+            // ticks
+            int numTicks = 22;
+            float tickRadius = radius + 4.0f;
+            float tickLength = 4.0f;
+            float tickWidth = 1.8f;
+            
+            float tickStartAngle = juce::MathConstants<float>::pi * 0.70f;
+            float tickEndAngle = juce::MathConstants<float>::pi * 2.30f;
+            
+            g.setColour(juce::Colours::lightgrey);
+            
+            for (int i = 0; i < numTicks; ++i)
+            {
+                float proportion = i / float(numTicks - 1);
+                float tickAngle = tickStartAngle + proportion * (tickEndAngle - tickStartAngle);
+                float sinA = std::sin(tickAngle);
+                float cosA = std::cos(tickAngle);
+                
+                float startX = centreX + cosA * tickRadius;
+                float startY = centreY + sinA * tickRadius;
+                float endX = centreX + cosA * (tickRadius + tickLength);
+                float endY = centreY + sinA * (tickRadius + tickLength);
+                
+                g.drawLine(startX, startY, endX, endY, tickWidth);
+            }
         }
     }
 
     
     void drawLinearSlider (Graphics& g, int x, int y, int width, int height,
                            float sliderPos, float minSliderPos, float maxSliderPos,
-                           Slider::SliderStyle, Slider& slider) override
+                           Slider::SliderStyle style, Slider& slider) override
     {
+        if (style == Slider::LinearHorizontal && slider.getRange().getStart() == 0 && slider.getRange().getEnd() == 1)
+        {
+            // background track
+            const float trackHeight = height / 8.0f;
+            const float trackRadius = trackHeight / 6.0f;
+            Rectangle<float> trackRect (x, y + (height - trackHeight) * 0.5f, width, trackHeight);
+
+            // background
+            g.setColour(Colour(0xFF0e0e0e));
+            g.fillRoundedRectangle(trackRect, trackRadius);
+
+            // bnob positions: left and right ends
+            const float knobWidth = width / 3.0f;
+            const float knobHeight = height / 3.0f;
+            const float knobRadius = 6.0f;
+
+            // Calculate left and right knob center x positions:
+            float leftKnobX = x + knobWidth * 0.5f;
+            float rightKnobX = x + width - knobWidth * 0.5f;
+
+            // Determine which position to draw the knob at (closest to sliderPos)
+            float knobCenterX = (sliderPos < (x + width * 0.5f)) ? leftKnobX : rightKnobX;
+            float knobCenterY = y + height * 0.5f;
+
+//            Colour knobColour = Colour(0xFFc67856);
+            Colour knobColour = juce::Colours::darkgrey;
+            g.setColour(knobColour);
+            g.fillRoundedRectangle(knobCenterX - knobWidth * 0.5f, knobCenterY - knobHeight * 0.5f, knobWidth, knobHeight, knobRadius);
+
+            // knob outline
+            g.setColour(juce::Colours::darkgrey);
+            g.drawRoundedRectangle(knobCenterX - knobWidth * 0.5f, knobCenterY - knobHeight * 0.5f, knobWidth, knobHeight, knobRadius, 1.5f);
+
+            return;
+        }
+        
         const float tickPaddingLeft = 8.0f;   // left padding for ticks
         const float tickPaddingRight = 8.0f;  // right padding for symmetry
         const float verticalPadding = 6.0f;    // top/bottom padding for ticks and handle
@@ -160,7 +199,8 @@ public:
         const float tickLength = 6.0f;
         const float tickX = static_cast<float>(x) + 0.1f;
 
-        g.setColour(juce::Colour(0xFFf0f1f1)); // better white
+        // better white
+        g.setColour(juce::Colour(0xFFf0f1f1));
 
         for (int i = 0; i < numTicks; ++i)
         {
@@ -184,7 +224,8 @@ public:
         const float innerMargin = 2.0f;
         const float innerTrackWidth = static_cast<float>(width) / 3.0f - 2.0f * innerMargin;
 
-        g.setColour(juce::Colours::black);
+//        g.setColour(juce::Colours::black);
+        g.setColour(juce::Colour(0xFF0e0e0e));
         g.fillRect((static_cast<float>(x) + width * 0.5f) - innerTrackWidth * 0.5f,
                    trackY + innerMargin,
                    innerTrackWidth,
