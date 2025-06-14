@@ -31,10 +31,15 @@ void Blit::populateBlitTab()
         temp = step * i;
 
         for (int x = 0; x < 32; x++) {
+//            blitsMatrix[i][x] = x == 16 ?
+//                (!temp ? (2.0 * M_PI * 0.45) : (sin(2.0 * M_PI * 0.45 * (-temp)) / (-temp))) :
+//                (sin(2.0 * M_PI * 0.45 * (x - 16.0 - temp)) / (x - 16.0 - temp));
+//            blitsMatrix[i][x] *= (0.51 - 0.49 * (cos(2.0 * M_PI * (x - temp) / 32.0)));
+            
             blitsMatrix[i][x] = x == 16 ?
-                (!temp ? (2.0 * M_PI * 0.45) : (sin(2.0 * M_PI * 0.45 * (-temp)) / (-temp))) :
-                (sin(2.0 * M_PI * 0.45 * (x - 16.0 - temp)) / (x - 16.0 - temp));
-            blitsMatrix[i][x] *= (0.51 - 0.49 * (cos(2.0 * M_PI * (x - temp) / 32.0)));
+                (!temp ? (2.0 * mpi * 0.45) : (sin(2.0 * mpi * 0.45 * (-temp)) / (-temp))) :
+                (sin(2.0 * mpi * 0.45 * (x - 16.0 - temp)) / (x - 16.0 - temp));
+            blitsMatrix[i][x] *= (0.51 - 0.49 * (cos(2.0 * mpi * (x - temp) / 32.0)));
 
             totalSum += blitsMatrix[i][x];
         }
@@ -46,6 +51,7 @@ void Blit::populateBlitTab()
     }
 }
 
+// not sure if works correctly
 void Blit::setBlitPhase(const int phaseDegree, const double frequency)
 {
     double periodInSamples = sr / frequency;
@@ -54,28 +60,18 @@ void Blit::setBlitPhase(const int phaseDegree, const double frequency)
 
     // sample offset corresponding to the phase
     // a cycle conceptually starts with sampleCont = 0.
-    this->sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
-//    sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
+    sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
 
     // check that sampleCont is kept in a single cycle
     int roundedPeriod = static_cast<int>(round(periodInSamples));
     if (roundedPeriod > 0)
     {
-        this->sampleCont %= roundedPeriod;
-//        sampleCont %= roundedPeriod;
+        sampleCont %= roundedPeriod;
     }
     else
     {
-        this->sampleCont = 0;
-//        sampleCont = 0;
+        sampleCont = 0;
     }
-//    
-//    // reset sub-sample offsets
-//    this->subOff1 = 0.0;
-//    this->subOff2 = 0.0;
-//
-//    // reset 'passedNeg' for square waves
-//    this->passedNeg = false;
 }
 
 void Blit::clearAccumulator() {

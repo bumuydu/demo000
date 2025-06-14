@@ -181,27 +181,27 @@ void SupersawEditor::paint (juce::Graphics& g)
         g.setFont(juce::Font("Lato", 13.0f, juce::Font::plain));
         g.setColour(juce::Colour(0xFFf0f1f1));
 //        g.drawFittedText("Waveform",         72,  42, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Register",         212, 37, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("# of Saws",        72, 138, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Detune",           212, 138, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase",            72, 234, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Stereo Width",     212, 234, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase",            45, 259, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Reset",            45, 272, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sub Reg",           72, 388, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sub Waveform",     208, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Register",        212, 37, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("# of Oscs",       72, 138, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Detune",          212, 138, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase",           72, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Stereo Width",    212, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase",           45, 259, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Reset",           45, 272, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Register",        72, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Waveform",        208, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Saw",             380,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Sub",             450,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Noise",           520,  50, 60, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Noise Release",   382, 388, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Noise Color",     487, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Release",         382, 388, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Color",           487, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Cutoff",          640,  45, 120, 20, juce::Justification::centred, 1);
         g.drawFittedText("Quality",         657, 178, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("LFO Amt",         657, 283, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("EG Amt",          657, 388, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("LFO Waveform",    827,  45, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("LFO Freq/Rate",   827, 168, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("BPM",            802, 195, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Waveform",        827,  45, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Freq/Rate",       827, 168, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("BPM",             802, 195, 30, 20, juce::Justification::centred, 1);
         g.drawFittedText("Sync",            802, 208, 30, 20, juce::Justification::centred, 1);
         g.drawFittedText("Attack",          980,  45, 45, 20, juce::Justification::centred, 1);
         g.drawFittedText("Decay",          1035,  45, 45, 20, juce::Justification::centred, 1);
@@ -264,89 +264,61 @@ void SupersawEditor::setupToggle(ToggleButton& button, int x, int y, int w, int 
 //    button.setButtonText("Sync");
 }
 
-//void SupersawEditor::setupHorizontalSlider(Slider& slider, int x, int y, int w, int h)
-//{
-//    slider.setSliderStyle(Slider::SliderStyle::LinearHorizontal);
-//    slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 80, 20);
-//    addAndMakeVisible(&slider);
-//
-//    slider.setBounds(x, y, w, h);
-//}
-
 void SupersawEditor::loadWaveIcons()
 {
-    auto imagesDir = juce::File::getSpecialLocation(juce::File::invokedExecutableFile)
-                         .getParentDirectory()   // MacOS/
-                         .getParentDirectory()   // Contents/
-                         .getChildFile("Resources");
-
     for (int i = 0; i < 7; ++i)
     {
-        auto imageFile = imagesDir.getChildFile(juce::String(i + 1) + ".png");
+        juce::Image img;
 
-        if (imageFile.existsAsFile())
+        switch (i)
         {
-            std::unique_ptr<juce::InputStream> stream(imageFile.createInputStream());
+            case 0: img = juce::ImageCache::getFromMemory(BinaryData::_1_png, BinaryData::_1_pngSize); break;
+            case 1: img = juce::ImageCache::getFromMemory(BinaryData::_2_png, BinaryData::_2_pngSize); break;
+            case 2: img = juce::ImageCache::getFromMemory(BinaryData::_3_png, BinaryData::_3_pngSize); break;
+            case 3: img = juce::ImageCache::getFromMemory(BinaryData::_4_png, BinaryData::_4_pngSize); break;
+            case 4: img = juce::ImageCache::getFromMemory(BinaryData::_5_png, BinaryData::_5_pngSize); break;
+            case 5: img = juce::ImageCache::getFromMemory(BinaryData::_6_png, BinaryData::_6_pngSize); break;
+            case 6: img = juce::ImageCache::getFromMemory(BinaryData::_7_png, BinaryData::_7_pngSize); break;
+        }
 
-            if (stream != nullptr)
-            {
-                auto img = juce::PNGImageFormat().decodeImage(*stream);
-
-                if (img.isValid())
-                    waveIcons[i] = img;
-                else
-                    DBG("Failed to decode image: " + imageFile.getFullPathName());
-            }
-            else
-            {
-                DBG("Failed to create input stream for: " + imageFile.getFullPathName());
-            }
+        if (img.isValid())
+        {
+            waveIcons[i] = img;
         }
         else
         {
-            DBG("Image file does not exist: " + imageFile.getFullPathName());
+            DBG("Failed to load wave icon image " + juce::String(i + 1));
         }
     }
 }
 
 void SupersawEditor::loadWaveIcons2()
 {
-    auto imagesDir = juce::File::getSpecialLocation(juce::File::invokedExecutableFile)
-                         .getParentDirectory()   // MacOS/
-                         .getParentDirectory()   // Contents/
-                         .getChildFile("Resources");
-
     juce::StringArray filenames = { "sine.png", "3.png", "4.png", "5.png", "env1.png", "env2.png", "cutoff.png", "cutoff2.png" };
 
     for (int i = 0; i < filenames.size(); ++i)
     {
-        auto imageFile = imagesDir.getChildFile(filenames[i]);
+        juce::Image img;
 
-        if (imageFile.existsAsFile())
+        if      (filenames[i] == "sine.png")    img = juce::ImageCache::getFromMemory(BinaryData::sine_png, BinaryData::sine_pngSize);
+        else if (filenames[i] == "3.png")       img = juce::ImageCache::getFromMemory(BinaryData::_3_png, BinaryData::_3_pngSize);
+        else if (filenames[i] == "4.png")       img = juce::ImageCache::getFromMemory(BinaryData::_4_png, BinaryData::_4_pngSize);
+        else if (filenames[i] == "5.png")       img = juce::ImageCache::getFromMemory(BinaryData::_5_png, BinaryData::_5_pngSize);
+        else if (filenames[i] == "env1.png")    img = juce::ImageCache::getFromMemory(BinaryData::env1_png, BinaryData::env1_pngSize);
+        else if (filenames[i] == "env2.png")    img = juce::ImageCache::getFromMemory(BinaryData::env2_png, BinaryData::env2_pngSize);
+        else if (filenames[i] == "cutoff.png")  img = juce::ImageCache::getFromMemory(BinaryData::cutoff_png, BinaryData::cutoff_pngSize);
+        else if (filenames[i] == "cutoff2.png") img = juce::ImageCache::getFromMemory(BinaryData::cutoff2_png, BinaryData::cutoff2_pngSize);
+
+        if (img.isValid())
         {
-            std::unique_ptr<juce::InputStream> stream(imageFile.createInputStream());
-
-            if (stream != nullptr)
-            {
-                auto img = juce::PNGImageFormat().decodeImage(*stream);
-
-                if (img.isValid())
-                    waveIcons2[i] = img;
-                else
-                    DBG("Failed to decode image: " + imageFile.getFullPathName());
-            }
-            else
-            {
-                DBG("Failed to create input stream for: " + imageFile.getFullPathName());
-            }
+            waveIcons2[i] = img;
         }
         else
         {
-            DBG("Image file does not exist: " + imageFile.getFullPathName());
+            DBG("Failed to load BinaryData image: " + filenames[i]);
         }
     }
 }
-
 
 void SupersawEditor::drawWaveforms(Graphics& g)
 {

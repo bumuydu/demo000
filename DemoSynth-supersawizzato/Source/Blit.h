@@ -41,6 +41,8 @@ private:
 
     double decrementStep = 0.0;
     double offset = 0.0;
+    
+    double mpi = MathConstants<double>::pi;
 
     int sampleCont = 0;
     bool passedNeg = false;
