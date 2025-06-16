@@ -85,6 +85,13 @@ public:
 //        return adsr1.getNextSample();
     }
     
+    void getEnvelopeBuffer(AudioBuffer<double>& envelopeBuffer, int startSample, int numSamples)
+    {
+        auto* envData = envelopeBuffer.getWritePointer(0);
+        for (int i = 0; i < numSamples; ++i)
+            envData[startSample + i] = getNextSampleFilter();
+    }
+    
 private:
     ADSR adsr1;
     ADSR adsr2;

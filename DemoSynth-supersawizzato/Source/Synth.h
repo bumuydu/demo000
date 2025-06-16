@@ -29,6 +29,8 @@ public:
                      int defaultSubReg = 2, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
     : sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), subRegister(defaultSubReg), egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)
 	{
+        moogFilter.setCutoff(4000);
+        moogFilter.setResonance(0.0f);
 	};
 	
 	~SimpleSynthVoice() {};
@@ -49,6 +51,7 @@ public:
         mixerBuffer.setSize(0, 0);
         modulation.setSize(0, 0);
         frequencyBuffer.setSize(0, 0);
+        filterEnvBuffer.setSize(0, 0);
     }
 
 	void startNote(int midiNoteNumber, float velocity, SynthesiserSound* sound, int currentPitchWheelPosition) override
@@ -130,7 +133,8 @@ public:
         
         // FILTERING - process the mixed buffer through a ladder filter
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
-        moogFilter.process(mixerBuffer, ampAdsr, modulation, startSample, numSamples);
+//        moogFilter.process(mixerBuffer, ampAdsr, modulation, startSample, numSamples);
+        moogFilter.process(mixerBuffer, filterEnvBuffer, modulation, startSample, numSamples);
 
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, startSample, numSamples);
          
@@ -166,6 +170,7 @@ public:
         noiseBuffer.setSize(1, samplesPerBlock);
         mixerBuffer.setSize(2, samplesPerBlock);
         modulation.setSize(2, samplesPerBlock);
+        filterEnvBuffer.setSize(1, samplesPerBlock);
         frequencyBuffer.setSize(1, samplesPerBlockOs);
         
         // initializing oscillators, noise generator and filters, mixer etc.
@@ -366,7 +371,8 @@ private:
     void frequencyModulation(int startSample, int numSamples)
     {
         auto fmOsc1Data = frequencyBuffer.getArrayOfWritePointers();
-
+        ampAdsr.getEnvelopeBuffer(filterEnvBuffer, startSample, numSamples);
+        
         for (int i = startSample; i < numSamples; ++i)
         {
             const double currentNoteNumber = noteNumber.getNextValue();
@@ -394,6 +400,7 @@ private:
     int currentMidiNote = 60;
     SmoothedValue<double, ValueSmoothingTypes::Linear> noteNumber;
     AudioBuffer<double> frequencyBuffer;
+    AudioBuffer<double> filterEnvBuffer;
 
 	MyADSR ampAdsr;         // double ADSR
     bool trigger = false;   // used for triggering the noise envelope

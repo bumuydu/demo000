@@ -15,14 +15,17 @@ public:
         setCutoff(cutoff);
         update(cutoff);
     };
-    void process(AudioBuffer<float>& buffer, MyADSR& adsr, AudioBuffer<double>& lfo, int startSample, int numSamples, int channel)
+//    void process(AudioBuffer<float>& buffer, MyADSR adsr, AudioBuffer<double>& lfo, int startSample, int numSamples, int channel)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& envBuffer, AudioBuffer<double>& lfo, int startSample, int numSamples, int channel)
     {
         auto bufferData = buffer.getArrayOfWritePointers();
+        auto* envData = envBuffer.getReadPointer(0);
         
         int endSample = startSample + numSamples;
         for (int smp = startSample; smp < endSample ; ++smp)
         {
-            float env = adsr.getNextSampleFilter();
+//            float env = adsr.getNextSampleFilter();
+            float env = envData[smp];
             float lfoVal = lfo.getSample(0, smp);
             float envModInSemitones = env * egAmt * maxEnvModSemitones;
             float lfoModInSemitones = lfoVal * lfoAmt * maxLfoModSemitones;
@@ -89,7 +92,7 @@ private:
     float* y = out;
     float lfoAmt = 0;
     float egAmt = 0;
-    const float maxEnvModSemitones = 12.0f;
+    const float maxEnvModSemitones = 24.0f;
     const float maxLfoModSemitones = 24.0f;
     int numOutputChannels = 0;
 };
@@ -109,11 +112,11 @@ public:
 //        filterL.process(buffer, env, lfoVal, startSample, numSamples, 0);
 //        filterR.process(buffer, env, lfoVal, startSample, numSamples, 1);
 //    }
-    void process(AudioBuffer<float>& buffer, MyADSR& adsr, AudioBuffer<double>& lfo, int startSample, int numSamples)
+//    void process(AudioBuffer<float>& buffer, MyADSR adsr, AudioBuffer<double>& lfo, int startSample, int numSamples)
+    void process(AudioBuffer<float>& buffer, AudioBuffer<double>& envBuffer, AudioBuffer<double>& lfo, int startSample, int numSamples)
     {
-//        float env = adsr.getNextSample();
-        filterL.process(buffer, adsr, lfo, startSample, numSamples, 0);
-        filterR.process(buffer, adsr, lfo, startSample, numSamples, 1);
+        filterL.process(buffer, envBuffer, lfo, startSample, numSamples, 0);
+        filterR.process(buffer, envBuffer, lfo, startSample, numSamples, 1);
     }
     void setCutoff(const double newCutoffFrequencyHz)
     {
