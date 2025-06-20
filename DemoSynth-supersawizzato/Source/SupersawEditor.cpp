@@ -49,14 +49,9 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupSlider(releaseSlider,       1145,  70, 45, 200);
     setupKnob(masterSlider,          1112, 328, 75, 75);
     setupSlider(oversamplingSlider,  1110, 400, 80, 70);
-
-
-//    setupHorizontalSlider(oversamplingSlider, 1120, 380, 80, 30);
-    
     
     // hide bpm synchronised lfo rate
     lfoRateSlider.setVisible(false);
-//    lfoSyncSlider.setbut
     lfoSyncToggle.setButtonText("Sync");
     phaseResettingToggle.setButtonText("On/Off");
 
@@ -175,7 +170,7 @@ void SupersawEditor::paint (juce::Graphics& g)
     }
     
     // param labels
-    {
+    { 
         g.setFont(12.0f);
 //        g.setFont(juce::Font::bold);
         g.setFont(juce::Font("Lato", 13.0f, juce::Font::plain));
@@ -231,14 +226,11 @@ void SupersawEditor::paint (juce::Graphics& g)
 
 void SupersawEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
 }
 
 void SupersawEditor::setupKnob(Slider& slider, int x, int y, int w, int h)
 {
     slider.setSliderStyle(Slider::SliderStyle::RotaryVerticalDrag);
-//    slider.setTextBoxStyle(Slider::TextBoxBelow, false, 60, 15);
     slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     slider.setPopupDisplayEnabled(true, true, this);
     addAndMakeVisible(&slider);
@@ -249,7 +241,6 @@ void SupersawEditor::setupKnob(Slider& slider, int x, int y, int w, int h)
 void SupersawEditor::setupSlider(Slider& slider, int x, int y, int w, int h)
 {
     slider.setSliderStyle(Slider::SliderStyle::LinearBarVertical);
-//    slider.setTextBoxStyle(Slider::TextBoxBelow, false, 60, 15);
     slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     slider.setPopupDisplayEnabled(true, true, this);
     addAndMakeVisible(&slider);
@@ -261,7 +252,6 @@ void SupersawEditor::setupToggle(ToggleButton& button, int x, int y, int w, int 
 {
     addAndMakeVisible(button);
     button.setBounds(x, y, w, h);
-//    button.setButtonText("Sync");
 }
 
 void SupersawEditor::loadWaveIcons()
@@ -331,16 +321,14 @@ void SupersawEditor::drawWaveforms(Graphics& g)
     {
         if (waveIcons[i].isValid())
         {
-            // Start at bottom-left (135°), end at bottom-right (45°), moving clockwise
-//            const float startAngle = 3.0f * juce::MathConstants<float>::pi / 4.0f; // 135°
-//            const float endAngle   = 9.0f * juce::MathConstants<float>::pi / 4.0f;       // 45°
+            // start at bottom-left (135°), end at bottom-right (45°), moving clockwise
             float startAngle = juce::MathConstants<float>::pi * 0.70f;
             float endAngle = juce::MathConstants<float>::pi * 2.30f;
             const float angleStep  = (endAngle - startAngle) / 6.0f; // 6 steps between 7 points
 
             const float angle = startAngle + i * angleStep;
 
-            // --- Tick position
+            // --- tick position
             const float tickDistance = radius - 8.0f;
             const float tickLength = 4.0f;
 

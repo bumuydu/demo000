@@ -34,8 +34,8 @@ private:
     double alpha = 0.999;
 //    double leakiness = 0.0;
 //    double leakinessTri = 0.0;
-    double leakiness = 0.001;
-    double leakinessTri = 0.001;
+    double leakiness = 0.0001;
+    double leakinessTri = 0.0001;
 
     double accSaw = 0.0;
     double accSquare = 0.0;

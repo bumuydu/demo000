@@ -2,28 +2,23 @@
 #include "PluginParameters.h"
 #include "SupersawEditor.h"
 
-// Polifonia del mio sintetizzatore (numero di voci)
 #define NUM_VOICES 8
 
 //==============================================================================
 DemoSynthAudioProcessor::DemoSynthAudioProcessor()
-     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)), // Niente input
+     : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
        parameters(*this, nullptr, "SynthSettings", { Parameters::createParameterLayout() })
 {
-    // Per prima cosa aggiungo uno o più SynthSound al synth
     mySynth.addSound(new MySynthSound());
 
-    // Poi aggiungo tante voci di polifonia quante voglio che possa gestirne
     for (int v = 0; v < NUM_VOICES; ++v)
         mySynth.addVoice(new SimpleSynthVoice(Parameters::defaultAtk, Parameters::defaultDcy, Parameters::defaultSus, Parameters::defaultRel));
 
-    // E poi attacco il processor ai parametri, come al solito
     Parameters::addListenerToAllParameters(parameters, this);
 }
 
 //==============================================================================
 
-// Questo è l'unico metodo diverso rispetto a un normale plugin VST
 bool DemoSynthAudioProcessor::acceptsMidi() const
 {
     return true;
@@ -47,7 +42,6 @@ void DemoSynthAudioProcessor::releaseResources()
             voice->releaseResources();
 }
 
-// Supporta mono o stereo out (input non presente, come definito nel costruttore)
 bool DemoSynthAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
@@ -65,22 +59,18 @@ void DemoSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
             voice->updatePosition(hostPosition);
     
-    // Pulisco il buffer (non c'è input, e le SynthVoice sommano, non sovrascrivono)
     buffer.clear();
 
-    // Lascio che la classe Synthsiser faccia le sue magie
     mySynth.renderNextBlock(buffer, midiMessages, 0, numSamples);
 }
 
 bool DemoSynthAudioProcessor::hasEditor() const
 {
-//    return false;
     return true;
 }
 
 juce::AudioProcessorEditor* DemoSynthAudioProcessor::createEditor()
 {
-//    return nullptr;
     return new SupersawEditor(*this, parameters);
 }
 
@@ -123,7 +113,6 @@ void DemoSynthAudioProcessor::setStateInformation (const void* data, int sizeInB
 
 void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newValue)
 {
-    // Il cambio di parametri va propagato a tutte le voci di polifonia del synth
     for (int v = 0; v < mySynth.getNumVoices(); ++v)
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
         {
@@ -221,7 +210,6 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
 }
 
 //==============================================================================
-// This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new DemoSynthAudioProcessor();

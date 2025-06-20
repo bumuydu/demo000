@@ -459,9 +459,7 @@ public:
         case 3: // square
             sampleValue = (currentPhase > 0.5) - (currentPhase < 0.5);
             break;
-//        case 4: // Stepped S&H
-//                sampleValue = ... ;
-//        case 5: // Smooth S&H
+//        case 4: // S&H
 //                sampleValue = ... ;
         default:
             // If it comes here, there is sth wrong
