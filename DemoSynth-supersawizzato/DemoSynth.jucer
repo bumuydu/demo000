@@ -15,33 +15,33 @@
       <FILE id="qilZQG" name="PluginParameters.h" compile="0" resource="0"
             file="Source/PluginParameters.h"/>
       <GROUP id="{0FDD39A7-9CA9-DDBC-1431-EA5E5440A394}" name="GUI">
-        <FILE id="xwX5ec" name="cutoff2.png" compile="0" resource="1" file="Resources/images/cutoff2.png"
+        <FILE id="Yw8HQN" name="1.svg" compile="0" resource="1" file="Resources/images/1.svg"
               xcodeResource="1"/>
-        <FILE id="gmtK8N" name="cutoff.png" compile="0" resource="1" file="Resources/images/cutoff.png"
+        <FILE id="dLOD0d" name="2.svg" compile="0" resource="1" file="Resources/images/2.svg"
+              xcodeResource="1"/>
+        <FILE id="uZI3aH" name="3.svg" compile="0" resource="1" file="Resources/images/3.svg"
+              xcodeResource="1"/>
+        <FILE id="wcaUuR" name="4.svg" compile="0" resource="1" file="Resources/images/4.svg"
+              xcodeResource="1"/>
+        <FILE id="ZhiMLH" name="5.svg" compile="0" resource="1" file="Resources/images/5.svg"
+              xcodeResource="1"/>
+        <FILE id="k7JuV7" name="6.svg" compile="0" resource="1" file="Resources/images/6.svg"
+              xcodeResource="1"/>
+        <FILE id="dFhGgX" name="7.svg" compile="0" resource="1" file="Resources/images/7.svg"
+              xcodeResource="1"/>
+        <FILE id="KIFTWB" name="sine.svg" compile="0" resource="1" file="Resources/images/sine.svg"
+              xcodeResource="1"/>
+        <FILE id="uUD9AN" name="shstep.svg" compile="0" resource="1" file="Resources/images/shstep.svg"
+              xcodeResource="1"/>
+        <FILE id="Gwt0lS" name="shsmooth.png" compile="0" resource="1" file="Resources/images/shsmooth.png"
               xcodeResource="1"/>
         <FILE id="Sa1lEA" name="env1.png" compile="0" resource="1" file="Resources/images/env1.png"
               xcodeResource="1"/>
         <FILE id="E90pOA" name="env2.png" compile="0" resource="1" file="Resources/images/env2.png"
               xcodeResource="1"/>
-        <FILE id="wzdOpY" name="2.png" compile="0" resource="1" file="Resources/images/2.png"
+        <FILE id="q4uGOC" name="cutoff.svg" compile="0" resource="1" file="Resources/images/cutoff.svg"
               xcodeResource="1"/>
-        <FILE id="bTHJwr" name="3.png" compile="0" resource="1" file="Resources/images/3.png"
-              xcodeResource="1"/>
-        <FILE id="jlQHP5" name="5.png" compile="0" resource="1" file="Resources/images/5.png"
-              xcodeResource="1"/>
-        <FILE id="SgC3Nt" name="6.png" compile="0" resource="1" file="Resources/images/6.png"
-              xcodeResource="1"/>
-        <FILE id="VNqx4T" name="7.png" compile="0" resource="1" file="Resources/images/7.png"
-              xcodeResource="1"/>
-        <FILE id="UbXEL2" name="1.png" compile="0" resource="1" file="Resources/images/1.png"
-              xcodeResource="1"/>
-        <FILE id="erAcAA" name="4.png" compile="0" resource="1" file="Resources/images/4.png"
-              xcodeResource="1"/>
-        <FILE id="lZp9yH" name="sine.png" compile="0" resource="1" file="Resources/images/sine.png"
-              xcodeResource="1"/>
-        <FILE id="Gwt0lS" name="shsmooth.png" compile="0" resource="1" file="Resources/images/shsmooth.png"
-              xcodeResource="1"/>
-        <FILE id="iuPkaR" name="shstep.png" compile="0" resource="1" file="Resources/images/shstep.png"
+        <FILE id="fFhIML" name="cutoff2.svg" compile="0" resource="1" file="Resources/images/cutoff2.svg"
               xcodeResource="1"/>
         <FILE id="oyWNkg" name="SupersawEditor.h" compile="0" resource="0"
               file="Source/SupersawEditor.h" xcodeResource="0"/>

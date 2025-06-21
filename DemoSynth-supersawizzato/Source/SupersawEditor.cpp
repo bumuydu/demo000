@@ -28,7 +28,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupKnob(stereoWidthSlider,      217, 254, 75, 75);
     setupToggle(phaseResettingToggle,  94, 270, 40, 40);
     setupKnob(subRegSlider,            77, 408, 75, 75);
-    setupSlider(subWaveformSlider,    205, 408, 85, 85);
+    setupSlider(subWaveformSlider,    205, 400, 85, 85);
     setupSlider(sawLevelSlider,       380,  70, 60, 260);
     setupSlider(subLevelSlider,       450,  70, 60, 260);
     setupSlider(noiseLevelSlider,     520,  70, 60, 260);
@@ -41,7 +41,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupKnob(lfoWaveformSlider,      832,  70, 75, 75);
     setupKnob(lfoFreqSlider,          832, 188, 75, 75);
     setupKnob(lfoRateSlider,          832, 188, 75, 75);
-    setupToggle(lfoSyncToggle,        802, 228, 30, 30);
+    setupToggle(lfoSyncToggle,        802, 226, 30, 30);
     setupSlider(attackSlider,         980,  70, 45, 200);
     setupSlider(decaySlider,         1035,  70, 45, 200);
     setupSlider(sustainSlider,       1090,  70, 45, 200);
@@ -92,7 +92,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     };
     
     loadWaveIcons();
-    loadWaveIcons2();
+//    loadWaveIcons2();
     
     this->setLookAndFeel(&supersawTheme);
 
@@ -177,7 +177,7 @@ void SupersawEditor::paint (juce::Graphics& g)
 //        g.drawFittedText("Phase",           45, 259, 30, 20, juce::Justification::centred, 1);
 //        g.drawFittedText("Reset",           45, 272, 30, 20, juce::Justification::centred, 1);
         g.drawFittedText("Register",        72, 388, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Waveform",        208, 388, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Waveform",        208, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Saw",             380,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Sub",             450,  50, 60, 20, juce::Justification::centred, 1);
         g.drawFittedText("Noise",           520,  50, 60, 20, juce::Justification::centred, 1);
@@ -187,10 +187,10 @@ void SupersawEditor::paint (juce::Graphics& g)
         g.drawFittedText("Quality",         657, 178, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("LFO Amt",         657, 283, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("EG Amt",          657, 388, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Waveform",        827,  45, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Waveform",        827,  45, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Freq/Rate",       827, 168, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("BPM",             802, 195, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Sync",            802, 208, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("BPM",             802, 193, 30, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Sync",            802, 206, 30, 20, juce::Justification::centred, 1);
         g.drawFittedText("Attack",          980,  45, 45, 20, juce::Justification::centred, 1);
         g.drawFittedText("Decay",          1035,  45, 45, 20, juce::Justification::centred, 1);
         g.drawFittedText("Sustain",        1090,  45, 45, 20, juce::Justification::centred, 1);
@@ -249,60 +249,65 @@ void SupersawEditor::setupToggle(ToggleButton& button, int x, int y, int w, int 
 
 void SupersawEditor::loadWaveIcons()
 {
-    for (int i = 0; i < 7; ++i)
+    juce::StringArray mainIcons = { "1.svg", "2.svg", "3.svg", "4.svg", "5.svg", "6.svg", "7.svg" };
+
+    auto renderSvgToImage = [](const void* data, int dataSize, int w = 64, int h = 64) -> juce::Image
+    {
+        std::unique_ptr<juce::Drawable> drawable(juce::Drawable::createFromImageData(data, dataSize));
+        if (drawable != nullptr)
+        {
+            juce::Image img(juce::Image::ARGB, w, h, true);
+            juce::Graphics g(img);
+            drawable->drawWithin(g, juce::Rectangle<float>(0, 0, (float)w, (float)h),
+                                 juce::RectanglePlacement::centred, 1.0f);
+            return img;
+        }
+        return {};
+    };
+
+    for (int i = 0; i < mainIcons.size(); ++i)
+    {
+        const juce::String& name = mainIcons[i];
+        const void* data = nullptr;
+        int dataSize = 0;
+
+        if      (name == "1.svg") { data = BinaryData::_1_svg; dataSize = BinaryData::_1_svgSize; }
+        else if (name == "2.svg") { data = BinaryData::_2_svg; dataSize = BinaryData::_2_svgSize; }
+        else if (name == "3.svg") { data = BinaryData::_3_svg; dataSize = BinaryData::_3_svgSize; }
+        else if (name == "4.svg") { data = BinaryData::_4_svg; dataSize = BinaryData::_4_svgSize; }
+        else if (name == "5.svg") { data = BinaryData::_5_svg; dataSize = BinaryData::_5_svgSize; }
+        else if (name == "6.svg") { data = BinaryData::_6_svg; dataSize = BinaryData::_6_svgSize; }
+        else if (name == "7.svg") { data = BinaryData::_7_svg; dataSize = BinaryData::_7_svgSize; }
+
+        waveIcons[i] = renderSvgToImage(data, dataSize);
+    }
+
+    // extra icons
+    for (int i = 0; i < 9; ++i)
     {
         juce::Image img;
 
         switch (i)
         {
-            case 0: img = juce::ImageCache::getFromMemory(BinaryData::_1_png, BinaryData::_1_pngSize); break;
-            case 1: img = juce::ImageCache::getFromMemory(BinaryData::_2_png, BinaryData::_2_pngSize); break;
-            case 2: img = juce::ImageCache::getFromMemory(BinaryData::_3_png, BinaryData::_3_pngSize); break;
-            case 3: img = juce::ImageCache::getFromMemory(BinaryData::_4_png, BinaryData::_4_pngSize); break;
-            case 4: img = juce::ImageCache::getFromMemory(BinaryData::_5_png, BinaryData::_5_pngSize); break;
-            case 5: img = juce::ImageCache::getFromMemory(BinaryData::_6_png, BinaryData::_6_pngSize); break;
-            case 6: img = juce::ImageCache::getFromMemory(BinaryData::_7_png, BinaryData::_7_pngSize); break;
+            case 0: img = renderSvgToImage(BinaryData::sine_svg, BinaryData::sine_svgSize); break;
+            case 1: img = renderSvgToImage(BinaryData::_3_svg, BinaryData::_3_svgSize); break;
+            case 2: img = renderSvgToImage(BinaryData::_4_svg, BinaryData::_4_svgSize); break;
+            case 3: img = renderSvgToImage(BinaryData::_5_svg, BinaryData::_5_svgSize); break;
+            case 4: img = renderSvgToImage(BinaryData::shstep_svg, BinaryData::shstep_svgSize); break;
+            case 5: img = juce::ImageCache::getFromMemory(BinaryData::env1_png, BinaryData::env1_pngSize); break;
+            case 6: img = juce::ImageCache::getFromMemory(BinaryData::env2_png, BinaryData::env2_pngSize); break;
+            case 7: img = renderSvgToImage(BinaryData::cutoff_svg, BinaryData::cutoff_svgSize); break;
+            case 8: img = renderSvgToImage(BinaryData::cutoff2_svg, BinaryData::cutoff2_svgSize); break;
         }
 
-        if (img.isValid())
-        {
-            waveIcons[i] = img;
-        }
-        else
-        {
-            DBG("Failed to load wave icon image " + juce::String(i + 1));
-        }
+        waveIcons2[i] = img;
     }
 }
 
-void SupersawEditor::loadWaveIcons2()
-{
-    juce::StringArray filenames = { "sine.png", "3.png", "4.png", "5.png", "shstep.png", "env1.png", "env2.png", "cutoff.png", "cutoff2.png" };
 
-    for (int i = 0; i < filenames.size(); ++i)
-    {
-        juce::Image img;
 
-        if      (filenames[i] == "sine.png")    img = juce::ImageCache::getFromMemory(BinaryData::sine_png, BinaryData::sine_pngSize);
-        else if (filenames[i] == "3.png")       img = juce::ImageCache::getFromMemory(BinaryData::_3_png, BinaryData::_3_pngSize);
-        else if (filenames[i] == "4.png")       img = juce::ImageCache::getFromMemory(BinaryData::_4_png, BinaryData::_4_pngSize);
-        else if (filenames[i] == "5.png")       img = juce::ImageCache::getFromMemory(BinaryData::_5_png, BinaryData::_5_pngSize);
-        else if (filenames[i] == "shstep.png")  img = juce::ImageCache::getFromMemory(BinaryData::shstep_png, BinaryData::shstep_pngSize);
-        else if (filenames[i] == "env1.png")    img = juce::ImageCache::getFromMemory(BinaryData::env1_png, BinaryData::env1_pngSize);
-        else if (filenames[i] == "env2.png")    img = juce::ImageCache::getFromMemory(BinaryData::env2_png, BinaryData::env2_pngSize);
-        else if (filenames[i] == "cutoff.png")  img = juce::ImageCache::getFromMemory(BinaryData::cutoff_png, BinaryData::cutoff_pngSize);
-        else if (filenames[i] == "cutoff2.png") img = juce::ImageCache::getFromMemory(BinaryData::cutoff2_png, BinaryData::cutoff2_pngSize);
 
-        if (img.isValid())
-        {
-            waveIcons2[i] = img;
-        }
-        else
-        {
-            DBG("Failed to load BinaryData image: " + filenames[i]);
-        }
-    }
-}
+
 
 void SupersawEditor::drawWaveforms(Graphics& g)
 {
@@ -398,14 +403,14 @@ void SupersawEditor::drawWaveforms(Graphics& g)
     }
     
     // sub waveforms
-    g.drawImage(waveIcons2[0], 218, 413, 20.0f, 18.0f, 0, 0, waveIcons2[0].getWidth(), waveIcons2[0].getHeight());
-    g.drawImage(waveIcons[5], 258, 413, 20.0f, 18.0f, 0, 0, waveIcons[5].getWidth(), waveIcons[5].getHeight());
+    g.drawImage(waveIcons2[0], 218, 400, 20.0f, 18.0f, 0, 0, waveIcons2[0].getWidth(), waveIcons2[0].getHeight());
+    g.drawImage(waveIcons[5], 258, 400, 20.0f, 18.0f, 0, 0, waveIcons[5].getWidth(), waveIcons[5].getHeight());
     
     // envelopes for the filter egAmtSlider: 660, 400, 85, 85);
-    g.drawImage(waveIcons2[6], 645, 460, 20.0f, 20.0f, 0, 0, waveIcons2[5].getWidth(), waveIcons2[5].getHeight());
-    g.drawImage(waveIcons2[5], 730, 460, 20.0f, 20.0f, 0, 0, waveIcons2[4].getWidth(), waveIcons2[4].getHeight());
+    g.drawImage(waveIcons2[6], 645, 460, 20.0f, 20.0f, 0, 0, waveIcons2[6].getWidth(), waveIcons2[6].getHeight());
+    g.drawImage(waveIcons2[5], 730, 460, 20.0f, 20.0f, 0, 0, waveIcons2[5].getWidth(), waveIcons2[5].getHeight());
     
     // noise cutoff image       490, 400, 85, 85)
-    g.drawImage(waveIcons2[7], 470, 465, 25.0f, 12.5f, 0, 0, waveIcons2[6].getWidth(), waveIcons2[6].getHeight());
-    g.drawImage(waveIcons2[8], 560, 465, 25.0f, 12.5f, 0, 0, waveIcons2[7].getWidth(), waveIcons2[7].getHeight());
+    g.drawImage(waveIcons2[7], 472, 460, 22.0f, 20.0f, 0, 0, waveIcons2[7].getWidth(), waveIcons2[7].getHeight());
+    g.drawImage(waveIcons2[8], 560, 460, 22.0f, 20.0f, 0, 0, waveIcons2[8].getWidth(), waveIcons2[8].getHeight());
 }

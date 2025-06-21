@@ -73,7 +73,7 @@ namespace Parameters
         NormalisableRange<float> detuneRange(0.0f, 200.0f);
         detuneRange.setSkewForCentre(50.0f);
         
-        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameMainWf, 1 }, "Main OSC Waveform", StringArray{"Saw Down","Saw/Tri","Triangle","Saw Up","Square","Wide Square","Narrow Square"}, defaultMainWf));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameMainWf, 1 }, "Main OSC Waveform", StringArray{"Saw Down","Sharktooth","Triangle","Saw Up","Square","Wide Square","Narrow Square"}, defaultMainWf));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameSawReg, 2 }, "Saw Register", StringArray{"-2","-1","0","1","2"}, defaultSawReg));
         params.push_back(std::make_unique<AudioParameterInt>(ParameterID { nameSawNum, 3 }, "# of Saws", 1, 16, defaultSawNum));
 //        params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameDetune, 4 }, "Detune", 0, 200, defaultDetune));

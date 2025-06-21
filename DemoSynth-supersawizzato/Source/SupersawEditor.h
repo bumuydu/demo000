@@ -32,7 +32,6 @@ private:
     void setupHorizontalSlider(Slider& slider, int x, int y, int w, int h);
     void setupToggle(ToggleButton& button, int x, int y, int w, int h);
     void loadWaveIcons();
-    void loadWaveIcons2();
     void drawWaveforms(Graphics& g);
     
     Image waveIcons[7];

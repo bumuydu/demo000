@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg id="svg2" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">
+  <desc>Source: openclipart.org/detail/209545</desc>
+  <defs>
+    <bx:export>
+      <bx:file format="svg" path="Untitled 2.svg"/>
+    </bx:export>
+    <bx:export>
+      <bx:file format="svg" href="#object-0"/>
+      <bx:file format="svg" href="#object-2" path="Untitled 3.svg"/>
+      <bx:file format="svg" href="#object-3" path="Untitled 4.svg"/>
+      <bx:file format="svg" href="#object-4" path="Untitled 5.svg"/>
+      <bx:file format="svg" href="#object-5" path="Untitled 6.svg"/>
+    </bx:export>
+  </defs>
+  <line style="stroke-linecap: round; stroke-width: 3; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 23.39px 40.991px;" x1="38.109" y1="40.997" x2="8.672" y2="40.985" id="object-0"/>
+  <path style="paint-order: fill; stroke-linejoin: round; stroke-linecap: round; stroke-width: 8; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 64.249px 53.655px;" d="M 87.085 66.42 C 83.959 65.91 70.687 39.043 41.415 40.991" id="object-2"/>
+  <line style="stroke-linecap: round; stroke-width: 5; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 64.637px 51.166px;" x1="64.638" y1="8.637" x2="64.636" y2="93.697" id="object-3"/>
+  <line style="stroke-linecap: round; stroke-width: 5; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 38.776px 50.874px;" x1="38.813" y1="24.812" x2="38.738" y2="76.937" id="object-4"/>
+  <line style="stroke-linecap: round; stroke-width: 5; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 89.245px 52.332px;" x1="89.283" y1="26.269" x2="89.208" y2="78.395" id="object-5"/>
+  <path d="M 46.758 23.624 C 46.405 23.816 46.405 24.007 46.758 24.197 L 56.303 29.355 C 56.656 29.547 56.833 29.451 56.833 29.069 L 56.833 18.752 C 56.833 18.37 56.656 18.275 56.303 18.466 L 46.758 23.624 Z" style="fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 10.503px 69.442px;"/>
+  <path d="M 82.257 24.198 C 82.61 24.007 82.61 23.816 82.257 23.625 L 72.712 18.467 C 72.358 18.276 72.182 18.371 72.182 18.753 L 72.182 29.07 C 72.182 29.452 72.358 29.547 72.712 29.356 L 82.257 24.198 Z" style="stroke-width: 1; fill: rgb(255, 255, 255); stroke: rgb(255, 255, 255); transform-origin: 10.502px 69.442px;"/>
+</svg>
