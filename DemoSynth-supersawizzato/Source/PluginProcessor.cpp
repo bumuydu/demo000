@@ -9,6 +9,8 @@ DemoSynthAudioProcessor::DemoSynthAudioProcessor()
      : AudioProcessor (BusesProperties().withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
        parameters(*this, nullptr, "SynthSettings", { Parameters::createParameterLayout() })
 {
+    mySynth.clearSounds();
+    mySynth.clearVoices();
     mySynth.addSound(new MySynthSound());
 
     for (int v = 0; v < NUM_VOICES; ++v)
@@ -28,7 +30,7 @@ bool DemoSynthAudioProcessor::acceptsMidi() const
 void DemoSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     mySynth.setCurrentPlaybackSampleRate(sampleRate);
-    mySynth.setNoteStealingEnabled(true);
+//    mySynth.setNoteStealingEnabled(true);
 
     for (int v = 0; v < mySynth.getNumVoices(); ++v)
         if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
@@ -110,6 +112,15 @@ void DemoSynthAudioProcessor::setStateInformation (const void* data, int sizeInB
         if (xmlState->hasTagName(parameters.state.getType()))
             parameters.replaceState(ValueTree::fromXml(*xmlState));
 }
+
+//void DemoSynthAudioProcessor::panic()
+//{
+//    mySynth.panic();
+//
+//    for (int v = 0; v < mySynth.getNumVoices(); ++v)
+//        if (auto voice = dynamic_cast<SimpleSynthVoice*>(mySynth.getVoice(v)))
+//            voice->resetVoice();  // must create a custom class inheriting from SynthesiserVoice + parameter
+//}
 
 void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newValue)
 {

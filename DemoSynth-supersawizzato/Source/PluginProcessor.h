@@ -2,6 +2,7 @@
 #include <JuceHeader.h>
 #include "Synth.h"
 #include "PluginParameters.h"
+#include "PolySynth.h"
 
 class DemoSynthAudioProcessor  : public juce::AudioProcessor, public AudioProcessorValueTreeState::Listener
 {
@@ -37,12 +38,14 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+//    void panic();
 
 private:
     void parameterChanged(const String& paramID, float newValue) override;
 
     AudioProcessorValueTreeState parameters;
-    Synthesiser mySynth;
+//    Synthesiser mySynth;
+    PolySynthesiser mySynth;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DemoSynthAudioProcessor)
