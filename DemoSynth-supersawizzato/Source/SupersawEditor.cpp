@@ -25,7 +25,6 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupKnob(mainRegisterSlider,     217,  58, 75, 75);
     setupKnob(numSawsSlider,           77, 158, 75, 75);
     setupKnob(detuneSlider,           217, 158, 75, 75);
-//    setupKnob(phaseSlider,             77, 254, 75, 75);
     setupKnob(stereoWidthSlider,      217, 254, 75, 75);
     setupToggle(phaseResettingToggle,  94, 270, 40, 40);
     setupKnob(subRegSlider,            77, 408, 75, 75);
@@ -48,7 +47,6 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupSlider(sustainSlider,       1090,  70, 45, 200);
     setupSlider(releaseSlider,       1145,  70, 45, 200);
     setupKnob(masterSlider,          1112, 328, 75, 75);
-//    setupSlider(oversamplingSlider,  1110, 400, 80, 70);
     
     // hide bpm synchronised lfo rate
     lfoRateSlider.setVisible(false);
@@ -61,7 +59,6 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     detuneAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameDetune, detuneSlider));
     stereoWidthAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameStereoWidth, stereoWidthSlider));
     phaseResettingAtttachment.reset(new juce::AudioProcessorValueTreeState::ButtonAttachment(valueTreeState, Parameters::namePhase, phaseResettingToggle));
-//    phaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::namePhaseDegree, phaseSlider));
     subRegAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSubReg, subRegSlider));
     subWfAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSubWf, subWaveformSlider));
     sawLevelAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSawLev, sawLevelSlider));
@@ -81,15 +78,10 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     releaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameRel, releaseSlider));
     noiseReleaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameNRel, noiseReleaseSlider));
     noiseColorAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameNFilt, noiseColorSlider));
-//    oversamplingAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameOversampling, oversamplingSlider));
     masterAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameMaster, masterSlider));
     
     subWaveformSlider.setSliderStyle(Slider::LinearHorizontal);
     subWaveformSlider.setRange(0, 1, 1);  // only values 0 or 1
-//    subWaveformSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
-//    oversamplingSlider.setSliderStyle(Slider::LinearHorizontal);
-//    oversamplingSlider.setRange(0, 1, 1);  // only values 0 or 1
-//    oversamplingSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
     
     lfoSyncToggle.onClick = [this]()
     {
@@ -285,7 +277,7 @@ void SupersawEditor::loadWaveIcons()
 
 void SupersawEditor::loadWaveIcons2()
 {
-    juce::StringArray filenames = { "sine.png", "3.png", "4.png", "5.png", "env1.png", "env2.png", "cutoff.png", "cutoff2.png" };
+    juce::StringArray filenames = { "sine.png", "3.png", "4.png", "5.png", "shstep.png", "env1.png", "env2.png", "cutoff.png", "cutoff2.png" };
 
     for (int i = 0; i < filenames.size(); ++i)
     {
@@ -295,6 +287,7 @@ void SupersawEditor::loadWaveIcons2()
         else if (filenames[i] == "3.png")       img = juce::ImageCache::getFromMemory(BinaryData::_3_png, BinaryData::_3_pngSize);
         else if (filenames[i] == "4.png")       img = juce::ImageCache::getFromMemory(BinaryData::_4_png, BinaryData::_4_pngSize);
         else if (filenames[i] == "5.png")       img = juce::ImageCache::getFromMemory(BinaryData::_5_png, BinaryData::_5_pngSize);
+        else if (filenames[i] == "shstep.png")  img = juce::ImageCache::getFromMemory(BinaryData::shstep_png, BinaryData::shstep_pngSize);
         else if (filenames[i] == "env1.png")    img = juce::ImageCache::getFromMemory(BinaryData::env1_png, BinaryData::env1_pngSize);
         else if (filenames[i] == "env2.png")    img = juce::ImageCache::getFromMemory(BinaryData::env2_png, BinaryData::env2_pngSize);
         else if (filenames[i] == "cutoff.png")  img = juce::ImageCache::getFromMemory(BinaryData::cutoff_png, BinaryData::cutoff_pngSize);
@@ -364,7 +357,7 @@ void SupersawEditor::drawWaveforms(Graphics& g)
 
     // Custom order: sine, 3, 4, 5
     // Assuming waveIcons2 is an array of 4 juce::Image objects in this order
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 5; ++i)
     {
         if (waveIcons2[i].isValid())
         {
@@ -372,7 +365,7 @@ void SupersawEditor::drawWaveforms(Graphics& g)
             // Let's use the same arc but split into 3 steps between 4 points:
             float startAngle2 = juce::MathConstants<float>::pi * 0.70f;  // ~126°
             float endAngle2 = juce::MathConstants<float>::pi * 2.30f;    // ~414°
-            const float angleStep2 = (endAngle2 - startAngle2) / 3.0f;  // 3 steps for 4 points
+            const float angleStep2 = (endAngle2 - startAngle2) / 4.0f;  // 4 steps for 5 points
 
             const float angle2 = startAngle2 + i * angleStep2;
 
@@ -409,10 +402,10 @@ void SupersawEditor::drawWaveforms(Graphics& g)
     g.drawImage(waveIcons[5], 258, 413, 20.0f, 18.0f, 0, 0, waveIcons[5].getWidth(), waveIcons[5].getHeight());
     
     // envelopes for the filter egAmtSlider: 660, 400, 85, 85);
-    g.drawImage(waveIcons2[5], 645, 460, 20.0f, 20.0f, 0, 0, waveIcons2[5].getWidth(), waveIcons2[5].getHeight());
-    g.drawImage(waveIcons2[4], 730, 460, 20.0f, 20.0f, 0, 0, waveIcons2[4].getWidth(), waveIcons2[4].getHeight());
+    g.drawImage(waveIcons2[6], 645, 460, 20.0f, 20.0f, 0, 0, waveIcons2[5].getWidth(), waveIcons2[5].getHeight());
+    g.drawImage(waveIcons2[5], 730, 460, 20.0f, 20.0f, 0, 0, waveIcons2[4].getWidth(), waveIcons2[4].getHeight());
     
     // noise cutoff image       490, 400, 85, 85)
-    g.drawImage(waveIcons2[6], 470, 465, 25.0f, 12.5f, 0, 0, waveIcons2[6].getWidth(), waveIcons2[6].getHeight());
-    g.drawImage(waveIcons2[7], 560, 465, 25.0f, 12.5f, 0, 0, waveIcons2[7].getWidth(), waveIcons2[7].getHeight());
+    g.drawImage(waveIcons2[7], 470, 465, 25.0f, 12.5f, 0, 0, waveIcons2[6].getWidth(), waveIcons2[6].getHeight());
+    g.drawImage(waveIcons2[8], 560, 465, 25.0f, 12.5f, 0, 0, waveIcons2[7].getWidth(), waveIcons2[7].getHeight());
 }

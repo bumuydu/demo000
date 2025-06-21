@@ -89,7 +89,7 @@ namespace Parameters
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltHz, 12 }, "Cutoff",   NormalisableRange<float>(5.0f, 19500.0f, 1.0f, 0.3f), defaultFiltHz));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltQ, 13 }, "Quality", NormalisableRange<float>(0.05f, 1.00f, 0.01f, 0.5f), defaultFiltQ));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltEnv, 14 }, "EG AMT", NormalisableRange<float>(-1.0f, 1.0f), defaultFiltEnv));
-        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoWf, 15 }, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Square"/*,"Stepped S&H"*/}, defaultLfoWf));
+        params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoWf, 15 }, "LFO Waveform", StringArray{"Sinusoidal","Triangular","Saw Up","Square", "S&H"}, defaultLfoWf));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameFiltLfoAmt, 16 }, "LFO AMT", NormalisableRange<float>(0.0f, 1.0f), defaultFiltLfoAmt));
         params.push_back(std::make_unique<AudioParameterFloat>(ParameterID { nameLfoFreq, 17 }, "LFO FREQ", NormalisableRange<float>(0.1f, 20.0f), defaultLfoFreq));
         params.push_back(std::make_unique<AudioParameterChoice>(ParameterID { nameLfoRate, 18 }, "LFO RATE", MetricTime::timeChoices, defaultLfoRate));

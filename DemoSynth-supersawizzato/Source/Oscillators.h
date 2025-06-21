@@ -435,8 +435,9 @@ public:
         case 3: // square
             sampleValue = (currentPhase > 0.5) - (currentPhase < 0.5);
             break;
-//        case 4: // S&H
-//                sampleValue = ... ;
+        case 4: // S&H
+            sampleValue = pOld > currentPhase ? (hold = noise.nextFloat() * 2.0f) - 1.0f : hold;
+            break;
         default:
             // If it comes here, there is sth wrong
             // LFO Oscillator not selected correctly
@@ -448,6 +449,7 @@ public:
             updatePhaseSync();
         else
         {
+            pOld = currentPhase;
             phaseIncrement = frequency.getNextValue() * samplePeriod;
             currentPhase += phaseIncrement;
             currentPhase -= static_cast<int>(currentPhase);
@@ -494,6 +496,13 @@ private:
     double ppqPeriod = 0.0;
     double syncPhaseIncrement = 0.0;
     double nominalPhase = 0.0;
+    
+    // pOld = vecchio valore del fasore
+    // hold = var temporanea
+    
+    Random noise;
+    float hold = 0.0f;
+    float pOld = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NaiveOscillator)
 };
