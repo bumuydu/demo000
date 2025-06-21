@@ -34,7 +34,7 @@ public:
         auto* inR = oversmpBuf.getReadPointer(1);
 
         const int endSampleOs = startSampleOs + numSamplesOs;
-        // modify: if coefficients change dynamically --> reset
+        // if coefficients change dynamically --> reset
 //        iirFilters[ch].reset();
         
         // filter all samples of the oversampled buffer

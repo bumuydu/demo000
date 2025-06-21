@@ -368,28 +368,6 @@ public:
     {
         synced = newValue;
     }
-
-//    float getNextAudioBlock(AudioBuffer<double>& buffer, const int numSamples)
-// modify: delete this if it isn't being used
-    float getNextAudioBlockOld(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
-    {
-        const int numCh = buffer.getNumChannels();
-        auto data = buffer.getArrayOfWritePointers();
-
-        // numSamples - 1 because I return the last sample
-        const int endSample = startSample + numSamples;
-//        for (int smp = 0; smp < numSamples - 1; ++smp)
-        for (int smp = startSample; smp < endSample - 1; ++smp)
-        {
-            const double sampleValue = getNextAudioSample();
-
-            for (int ch = 0; ch < numCh; ++ch)
-            {
-                data[ch][smp] = sampleValue;
-            }
-        }
-        return getNextAudioSample();
-    }
     
     void getNextAudioBlock(AudioBuffer<double>& buffer, const int startSample, const int numSamples)
     {

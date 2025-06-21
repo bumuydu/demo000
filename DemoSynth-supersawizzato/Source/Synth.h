@@ -29,8 +29,8 @@ public:
                      /*int defaultSubReg = 3,*/ float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
     : sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), /*subRegister(defaultSubReg),*/ egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)
 	{
-        moogFilter.setCutoff(4000);
-        moogFilter.setResonance(0.0f);
+//        moogFilter.setCutoff(4000);
+//        moogFilter.setResonance(0.0f);
 	};
 	
 	~SimpleSynthVoice() {};

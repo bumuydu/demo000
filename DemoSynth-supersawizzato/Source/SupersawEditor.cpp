@@ -171,8 +171,10 @@ void SupersawEditor::paint (juce::Graphics& g)
         g.drawFittedText("Register",        212, 37, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("# of Oscs",       72, 138, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Detune",          212, 138, 85, 20, juce::Justification::centred, 1);
-//        g.drawFittedText("Phase",           72, 234, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase Reset",     72, 234, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Phase Reset",     72, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase Reset",     72, 246, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Phase",     72, 234, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Reset",     72, 246, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Stereo Width",    212, 234, 85, 20, juce::Justification::centred, 1);
 //        g.drawFittedText("Phase",           45, 259, 30, 20, juce::Justification::centred, 1);
 //        g.drawFittedText("Reset",           45, 272, 30, 20, juce::Justification::centred, 1);
@@ -207,13 +209,14 @@ void SupersawEditor::paint (juce::Graphics& g)
     {
         g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold));
         g.setColour(juce::Colours::white);
-        g.drawFittedText("Supercore", getWidth() - 330, getHeight() - 60, 300, 40, juce::Justification::centredRight, 1);
+        g.drawFittedText("Supercore", getWidth() - 338, getHeight() - 60, 300, 40, juce::Justification::centredRight, 1);
     }
     {
         // author
         g.setFont(juce::Font("Lato", 14.0f, juce::Font::plain));
         g.setColour(juce::Colours::lightgrey);
-        g.drawText("Coded at LIM by Derin Donmez", getWidth() - 330, getHeight() - 70, 300, 20, juce::Justification::centredRight);
+        g.drawText("Coded at LIM by", getWidth() - 338, getHeight() - 87, 300, 20, juce::Justification::centredRight);
+        g.drawText("Derin Donmez", getWidth() - 338, getHeight() - 72, 300, 20, juce::Justification::centredRight);
     }
 }
 
