@@ -135,8 +135,8 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             if (paramID == Parameters::namePhase)
                 voice->setPhaseResetting(newValue);
             
-            if (paramID == Parameters::namePhaseDegree)
-                voice->setSawPhase(newValue);
+//            if (paramID == Parameters::namePhaseDegree)
+//                voice->setSawPhase(newValue);
             
             // OSC levels
             if (paramID == Parameters::nameSawLev)
@@ -200,8 +200,8 @@ void DemoSynthAudioProcessor::parameterChanged(const String& paramID, float newV
             if (paramID == Parameters::nameLfoSync)
                 voice->setLfoSync(newValue);
             
-            if (paramID == Parameters::nameOversampling)
-                voice->setOversampling(newValue);
+//            if (paramID == Parameters::nameOversampling)
+//                voice->setOversampling(newValue);
             
             if (paramID == Parameters::nameMaster)
                 voice->setMasterGain(newValue);

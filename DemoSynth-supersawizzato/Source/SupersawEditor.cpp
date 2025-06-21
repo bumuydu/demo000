@@ -25,9 +25,9 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupKnob(mainRegisterSlider,     217,  58, 75, 75);
     setupKnob(numSawsSlider,           77, 158, 75, 75);
     setupKnob(detuneSlider,           217, 158, 75, 75);
-    setupKnob(phaseSlider,             77, 254, 75, 75);
+//    setupKnob(phaseSlider,             77, 254, 75, 75);
     setupKnob(stereoWidthSlider,      217, 254, 75, 75);
-    setupToggle(phaseResettingToggle,  45, 292, 30, 30);
+    setupToggle(phaseResettingToggle,  94, 270, 40, 40);
     setupKnob(subRegSlider,            77, 408, 75, 75);
     setupSlider(subWaveformSlider,    205, 408, 85, 85);
     setupSlider(sawLevelSlider,       380,  70, 60, 260);
@@ -48,7 +48,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     setupSlider(sustainSlider,       1090,  70, 45, 200);
     setupSlider(releaseSlider,       1145,  70, 45, 200);
     setupKnob(masterSlider,          1112, 328, 75, 75);
-    setupSlider(oversamplingSlider,  1110, 400, 80, 70);
+//    setupSlider(oversamplingSlider,  1110, 400, 80, 70);
     
     // hide bpm synchronised lfo rate
     lfoRateSlider.setVisible(false);
@@ -61,7 +61,7 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     detuneAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameDetune, detuneSlider));
     stereoWidthAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameStereoWidth, stereoWidthSlider));
     phaseResettingAtttachment.reset(new juce::AudioProcessorValueTreeState::ButtonAttachment(valueTreeState, Parameters::namePhase, phaseResettingToggle));
-    phaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::namePhaseDegree, phaseSlider));
+//    phaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::namePhaseDegree, phaseSlider));
     subRegAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSubReg, subRegSlider));
     subWfAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSubWf, subWaveformSlider));
     sawLevelAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameSawLev, sawLevelSlider));
@@ -81,14 +81,14 @@ SupersawEditor::SupersawEditor (DemoSynthAudioProcessor& p, AudioProcessorValueT
     releaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameRel, releaseSlider));
     noiseReleaseAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameNRel, noiseReleaseSlider));
     noiseColorAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameNFilt, noiseColorSlider));
-    oversamplingAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameOversampling, oversamplingSlider));
+//    oversamplingAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameOversampling, oversamplingSlider));
     masterAtttachment.reset(new SliderAttachment(valueTreeState, Parameters::nameMaster, masterSlider));
     
     subWaveformSlider.setSliderStyle(Slider::LinearHorizontal);
     subWaveformSlider.setRange(0, 1, 1);  // only values 0 or 1
 //    subWaveformSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
-    oversamplingSlider.setSliderStyle(Slider::LinearHorizontal);
-    oversamplingSlider.setRange(0, 1, 1);  // only values 0 or 1
+//    oversamplingSlider.setSliderStyle(Slider::LinearHorizontal);
+//    oversamplingSlider.setRange(0, 1, 1);  // only values 0 or 1
 //    oversamplingSlider.setSnapToMousePosition(true); // snaps immediately to nearest value
     
     lfoSyncToggle.onClick = [this]()
@@ -141,7 +141,7 @@ void SupersawEditor::paint (juce::Graphics& g)
     drawPanel({620, 20, 160, 480}, juce::Colour(0xFF1C2531)); // FILTER
     drawPanel({800, 20, 140, 260}, juce::Colour(0xFF1C2531)); // LFO
     drawPanel({960, 20, 250, 260}, juce::Colour(0xFF1C2531)); // ENV
-    drawPanel({1090, 300, 120, 155}, juce::Colour(0xff2b2d31)); // MASTER
+    drawPanel({1090, 300, 120, 115}, juce::Colour(0xff2b2d31)); // MASTER
     
     // panel labels
     {
@@ -179,10 +179,11 @@ void SupersawEditor::paint (juce::Graphics& g)
         g.drawFittedText("Register",        212, 37, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("# of Oscs",       72, 138, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Detune",          212, 138, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase",           72, 234, 85, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Phase",           72, 234, 85, 20, juce::Justification::centred, 1);
+        g.drawFittedText("Phase Reset",     72, 234, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Stereo Width",    212, 234, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Phase",           45, 259, 30, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Reset",           45, 272, 30, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Phase",           45, 259, 30, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Reset",           45, 272, 30, 20, juce::Justification::centred, 1);
         g.drawFittedText("Register",        72, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Waveform",        208, 388, 85, 20, juce::Justification::centred, 1);
         g.drawFittedText("Saw",             380,  50, 60, 20, juce::Justification::centred, 1);
@@ -203,7 +204,7 @@ void SupersawEditor::paint (juce::Graphics& g)
         g.drawFittedText("Sustain",        1090,  45, 45, 20, juce::Justification::centred, 1);
         g.drawFittedText("Release",        1145,  45, 45, 20, juce::Justification::centred, 1);
         g.drawFittedText("Master",         1107, 308, 85, 20, juce::Justification::centred, 1);
-        g.drawFittedText("Oversampling",   1110, 400, 80, 20, juce::Justification::centred, 1);
+//        g.drawFittedText("Oversampling",   1110, 400, 80, 20, juce::Justification::centred, 1);
     }
     
     // draw waveform details
@@ -214,13 +215,13 @@ void SupersawEditor::paint (juce::Graphics& g)
     {
         g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold));
         g.setColour(juce::Colours::white);
-        g.drawFittedText("Supercore", getWidth() - 330, getHeight() - 50, 300, 40, juce::Justification::centredRight, 1);
+        g.drawFittedText("Supercore", getWidth() - 330, getHeight() - 60, 300, 40, juce::Justification::centredRight, 1);
     }
     {
         // author
         g.setFont(juce::Font("Lato", 14.0f, juce::Font::plain));
         g.setColour(juce::Colours::lightgrey);
-        g.drawText("Coded at LIM by Derin Donmez", getWidth() - 330, getHeight() - 60, 300, 20, juce::Justification::centredRight);
+        g.drawText("Coded at LIM by Derin Donmez", getWidth() - 330, getHeight() - 70, 300, 20, juce::Justification::centredRight);
     }
 }
 

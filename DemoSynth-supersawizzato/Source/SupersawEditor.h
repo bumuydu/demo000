@@ -48,7 +48,7 @@ private:
     Slider stereoWidthSlider;
 //    Slider phaseResettingSlider;
     ToggleButton phaseResettingToggle;
-    Slider phaseSlider;
+//    Slider phaseSlider;
     Slider subRegSlider;
     Slider subWaveformSlider;
     Slider sawLevelSlider;
@@ -69,7 +69,7 @@ private:
     Slider releaseSlider;
     Slider noiseReleaseSlider;
     Slider noiseColorSlider;
-    Slider oversamplingSlider;
+//    Slider oversamplingSlider;
     Slider masterSlider;    
     
     SupersawLookAndFeel supersawTheme;
@@ -81,7 +81,7 @@ private:
     std::unique_ptr<SliderAttachment> stereoWidthAtttachment;
 //    std::unique_ptr<SliderAttachment> phaseResettingAtttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> phaseResettingAtttachment;
-    std::unique_ptr<SliderAttachment> phaseAtttachment;
+//    std::unique_ptr<SliderAttachment> phaseAtttachment;
     std::unique_ptr<SliderAttachment> subRegAtttachment;
     std::unique_ptr<SliderAttachment> subWfAtttachment;
     std::unique_ptr<SliderAttachment> sawLevelAtttachment;
@@ -102,7 +102,7 @@ private:
     std::unique_ptr<SliderAttachment> releaseAtttachment;
     std::unique_ptr<SliderAttachment> noiseReleaseAtttachment;
     std::unique_ptr<SliderAttachment> noiseColorAtttachment;
-    std::unique_ptr<SliderAttachment> oversamplingAtttachment;
+//    std::unique_ptr<SliderAttachment> oversamplingAtttachment;
     std::unique_ptr<SliderAttachment> masterAtttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SupersawEditor)

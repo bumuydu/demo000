@@ -25,9 +25,9 @@ private:
 class SimpleSynthVoice : public SynthesiserVoice
 {
 public:
-	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, float defaultPhase = 0.0f, float defaultStereoWidth = 0.0f,
-                     int defaultSubReg = 2, float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
-    : sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), subRegister(defaultSubReg), egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)
+	SimpleSynthVoice( int defaultSawNum = 5, int defaultDetune = 15, /*float defaultPhase = 0.0f,*/ float defaultStereoWidth = 0.0f,
+                     /*int defaultSubReg = 3,*/ float defaultEnvAmt = 0.0f, double defaultLfoFreq = 0.01, int defaultLfoWf = 0)
+    : sawOscs(defaultSawNum, defaultDetune, defaultStereoWidth), /*subRegister(defaultSubReg),*/ egAmt(defaultEnvAmt), subOscillator(20.0, 0), lfo(defaultLfoFreq, defaultLfoWf)
 	{
         moogFilter.setCutoff(4000);
         moogFilter.setResonance(0.0f);
@@ -64,13 +64,16 @@ public:
         
 		// Reset phase for each oscillator
         subOscillator.resetPhase();
-        sawOscs.startNote(nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1));
-        oSmp.resetFilter(); // modify: delete if not needed
         
-        // storing currentMidiNote for parameter changes related to the frequency
-        noteNumber.setTargetValue(midiNoteNumber);
         currentMidiNote = midiNoteNumber;
-        updateFreqs();  // this is mainly used so the sub can calculate its freq
+        sawOscs.startNote();
+        // storing currentMidiNote for parameter changes related to the frequency
+        noteNumber.setTargetValue(currentMidiNote);
+        
+        // this is done so that the sub can calculate its freq
+        updateFreqs();
+        
+        oSmp.resetFilter(); // modify: delete if not needed        
 
 		// Trigger the ADSR
 		ampAdsr.noteOn();
@@ -133,7 +136,6 @@ public:
         
         // FILTERING - process the mixed buffer through a ladder filter
         // to filter with the EG and LFO, we must get ADSR and LFO values then modulate the cutoff with their values
-//        moogFilter.process(mixerBuffer, ampAdsr, modulation, startSample, numSamples);
         moogFilter.process(mixerBuffer, filterEnvBuffer, modulation, startSample, numSamples);
 
         ampAdsr.applyEnvelopeToBuffer(mixerBuffer, startSample, numSamples);
@@ -183,7 +185,7 @@ public:
         lfo.prepareToPlay(sampleRate);
         ampAdsr.prepareToPlay(sampleRate);
         mixer.prepareToPlay(sampleRate);
-        noteNumber.reset(sampleRate, 0.001f);        
+        noteNumber.reset(sampleRate, 0.001f);
 	}
     
     void updatePosition(AudioPlayHead::CurrentPositionInfo newPosition)
@@ -200,9 +202,7 @@ public:
     
     void setSawRegister(const int newValue)
     {
-        // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
-        sawRegister = newValue - 2;
-        sawOscs.setRegister(sawRegister);
+        sawRegister = newValue;
         updateFreqs();
     }
     
@@ -219,11 +219,6 @@ public:
     void setSawStereoWidth(const float newValue)
     {
         sawOscs.setStereoWidth(newValue);
-    }
-    
-    void setSawPhase(const int newValue)
-    {
-        sawOscs.setPhaseDegree(newValue);
     }
     
     void setPhaseResetting(const bool newValue)
@@ -303,7 +298,6 @@ public:
     void setFilterEnvAmt(const float newValue)
     {
         moogFilter.setEnvAmt(newValue);
-//        egAmt = newValue;
     }
     
     void setFilterLfoAmt(const float newValue)
@@ -341,14 +335,6 @@ public:
         noiseOsc.setRelease(newValue);
     }
     
-    void setOversampling(const int newValue)
-    {
-        // parameter is choice = values are index values 0 and 1
-//        oversamplingFactor = (newValue + 1) * 2;
-        // modify: interrupt sounds and processing? -- then, reset the prepareToPlay?
-//        prepareToPlay(spec.sampleRate, spec.maximumBlockSize);
-    }
-    
     void setMasterGain(const float newValue)
     {
         mixer.setMasterGain(newValue);
@@ -357,9 +343,9 @@ public:
 private:
     
     void updateFreqs()
-    {
-        double baseFreq = nn2hz(currentMidiNote) * std::pow(2, sawRegister + 1);
-        double subFreq = baseFreq / std::pow(2, 5 - subRegister);
+    {                               // register param indexes: 0..4 → -2..+2
+                                    // multiply by 12 for octaves
+        double subFreq = nn2hz(currentMidiNote + (sawRegister + subRegister - 6) * 12);
         subOscillator.setFrequency(subFreq);
     }
     
@@ -376,7 +362,7 @@ private:
         for (int i = startSample; i < numSamples; ++i)
         {
             const double currentNoteNumber = noteNumber.getNextValue();
-            const double note = nn2hz(currentNoteNumber) * std::pow(2, sawRegister - 1);
+            const double note = nn2hz(currentNoteNumber + (sawRegister - 3) * 12);
             for (int j = 0; j < oversamplingFactor; ++j)
             {
                 fmOsc1Data[0][(i * oversamplingFactor) + j] = note;
@@ -395,8 +381,8 @@ private:
     NaiveOscillator lfo;
     
     // to track detune, register parameters on active note
-    int sawRegister = 0;
-    int subRegister;
+    int sawRegister = 3;
+    int subRegister = 2;
     int currentMidiNote = 60;
     SmoothedValue<double, ValueSmoothingTypes::Linear> noteNumber;
     AudioBuffer<double> frequencyBuffer;

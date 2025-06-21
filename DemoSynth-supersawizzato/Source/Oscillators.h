@@ -41,10 +41,10 @@ public:
         waveform = roundToInt(newValue);
     }
     
-    void setOscPhase(const int newValue, const double frequency)
-    {
-        blit.setBlitPhase(newValue, frequency);
-    }
+//    void setOscPhase(const int newValue, const double frequency)
+//    {
+//        blit.setBlitPhase(newValue, frequency);
+//    }
 
     void clearAccumulator()
     {
@@ -93,11 +93,11 @@ public:
         }
     }
 
-    void startNote(const double freq)
+    void startNote()
     {
         // if phase resetting is ON then set it to the selected value by the user
         if(phaseResetting)
-            setSawsPhase(sawPhase, freq);
+            setSawsPhase();
     }
     
     // the process method now with stereo width parameter that pans every oscillator
@@ -192,12 +192,6 @@ public:
         }
     }
     
-    void setRegister(const int newValue)
-    {
-        // -2 because the newValue is the index of the AudioParameterChoice which isn't the actual value
-        sawRegister = newValue - 2;
-    }
-    
     void setDetune(const float newValue)
     {
         sawDetune = newValue;
@@ -209,34 +203,18 @@ public:
         sawStereoWidth = newValue;
     }
     
+    // if resetting is on, the phase will reset on every startNote
     void setPhaseResetting(const bool newValue)
     {
-        // if resetting is on, the phase value will be used on every startNote
         phaseResetting = newValue;
     }
     
-    void setSawsPhase(const int phaseDegree, const double frequency)
+    void setSawsPhase()
     {
-        sawPhase = phaseDegree;
-        if (phaseDegree == 0) {
-            for (int i = 0; i < MAX_SAW_OSCS; ++i)
-            {
-                blitsOscs[i].clearAccumulator();
-            }
-        }
-        else
+        for (int i = 0; i < MAX_SAW_OSCS; ++i)
         {
-            for (int i = 0; i < MAX_SAW_OSCS; ++i)
-            {
-                blitsOscs[i].clearAccumulator();
-                blitsOscs[i].setOscPhase(phaseDegree, frequency);
-            }
+            blitsOscs[i].clearAccumulator();
         }
-    }
-    
-    void setPhaseDegree(const int newValue)
-    {
-        sawPhase = newValue;
     }
     
     void setActiveOscs(const int newValue)
@@ -259,10 +237,8 @@ private:
     AudioBuffer<double> frequencyBuffers[MAX_SAW_OSCS];
     
     // osc params
-    int sawRegister = -2;
     int sawDetune;
     bool phaseResetting = false;
-    int sawPhase = 0;
     float sawStereoWidth;
     
     // calculating cents to detune

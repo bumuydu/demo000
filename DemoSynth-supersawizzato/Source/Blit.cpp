@@ -51,29 +51,6 @@ void Blit::populateBlitTab()
     }
 }
 
-// not sure if works correctly
-void Blit::setBlitPhase(const int phaseDegree, const double frequency)
-{
-    double periodInSamples = sr / frequency;
-
-    double phaseOffset = phaseDegree / 360.0;
-
-    // sample offset corresponding to the phase
-    // a cycle conceptually starts with sampleCont = 0.
-    sampleCont = static_cast<int>(round(phaseOffset * periodInSamples));
-
-    // check that sampleCont is kept in a single cycle
-    int roundedPeriod = static_cast<int>(round(periodInSamples));
-    if (roundedPeriod > 0)
-    {
-        sampleCont %= roundedPeriod;
-    }
-    else
-    {
-        sampleCont = 0;
-    }
-}
-
 void Blit::clearAccumulator() {
     accTri = 0.0;
     accSaw = 0.0;
