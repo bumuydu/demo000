@@ -73,7 +73,7 @@ public:
         // this is done so that the sub can calculate its freq
         updateFreqs();
         
-        oSmp.resetFilter(); // modify: delete if not needed        
+//        oSmp.resetFilter(); // modify: delete if not needed        
 
 		// Trigger the ADSR
 		ampAdsr.noteOn();
@@ -176,7 +176,7 @@ public:
         frequencyBuffer.setSize(1, samplesPerBlockOs);
         
         // initializing oscillators, noise generator and filters, mixer etc.
-        oSmp.prepareToPlay(sampleRateOs, sampleRate);
+        oSmp.prepareToPlay(sampleRateOs, sampleRate, samplesPerBlockOs);
         sawOscs.prepareToPlay(stereoOversampledSpec);
         subOscillator.prepareToPlay(sampleRate);
         noiseOsc.prepareToPlay(spec);
