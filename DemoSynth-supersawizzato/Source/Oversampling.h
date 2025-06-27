@@ -38,7 +38,8 @@ public:
         // higher order means a steeper filter, higher latency
                                     // latency = (order - 1) / 2
         size_t filterOrder = 64;    // 32~ sample --> approx. 0.7 ms at 44.1kHz or 0.66 ms at 47 kHz
-
+        // modify: change the order to reduce aliasing but introduce more latency
+        
         firCoeffs = juce::dsp::FilterDesign<float>::designFIRLowpassWindowMethod(
             cutoff,
             sampleRateOs,

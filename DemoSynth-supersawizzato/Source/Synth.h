@@ -381,7 +381,7 @@ private:
     NaiveOscillator lfo;
     
     // to track detune, register parameters on active note
-    int sawRegister = 3;
+    int sawRegister = 2;
     int subRegister = 2;
     int currentMidiNote = 60;
     SmoothedValue<double, ValueSmoothingTypes::Linear> noteNumber;

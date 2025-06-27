@@ -54,7 +54,7 @@ namespace Parameters
     static const float defaultNFilt = 0.5f;
     static const float defaultMaster = 0.8f;
     
-    static const int defaultSawReg = 3; // modify: initial value is +1!!           in this case, it sets the default register to 0
+    static const int defaultSawReg = 2; // in this case, it sets the default register to 0
     static const int defaultSawNum = 5;
     static const int defaultPhase = 0;
 //    static const int defaultPhaseDegree = 0;
