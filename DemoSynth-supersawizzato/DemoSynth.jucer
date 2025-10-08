@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="Rwek1i" name="DemoSynth" projectType="audioplug" displaySplashScreen="1"
+<JUCERPROJECT id="Rwek1i" name="Supercore" projectType="audioplug" displaySplashScreen="1"
               jucerFormatVersion="1" companyName="Laboratorio di Informatica Musicale"
-              companyWebsite="www.lim.di.unimi.it" bundleIdentifier="com.lim.DemoSynth"
+              companyWebsite="www.lim.di.unimi.it" bundleIdentifier="com.lim.Supercore"
               pluginFormats="buildStandalone,buildVST3" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
-              pluginManufacturer="LIM" pluginManufacturerCode="LIM!" aaxIdentifier="com.lim.DemoSynth"
+              pluginManufacturer="LIM" pluginManufacturerCode="LIM!" aaxIdentifier="com.lim.Supercore"
               defines="JUCE_MODAL_LOOPS_PERMITTED = 1">
-  <MAINGROUP id="c1e0SV" name="DemoSynth">
+  <MAINGROUP id="c1e0SV" name="Supercore">
     <GROUP id="{9CD4BB01-4B89-AC5D-07D7-CCF964C7AD84}" name="Source">
       <FILE id="s4ZGtI" name="PolySynth.h" compile="0" resource="0" file="Source/PolySynth.h"/>
       <FILE id="nkyHcA" name="PluginProcessor.cpp" compile="1" resource="0"

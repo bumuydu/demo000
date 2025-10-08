@@ -76,7 +76,9 @@ public:
 //        oSmp.resetFilter(); // modify: delete if not needed        
 
 		// Trigger the ADSR
-		ampAdsr.noteOn();
+        ampAdsr.noteOn();
+        filterAdsr.noteOn();
+		filterAdsr.noteOn();
         velocityLevel = Decibels::decibelsToGain(velocity * VELOCITY_DYN_RANGE - VELOCITY_DYN_RANGE);
 //		velocityLevel = velocity;
 //        mixer.updateGain();
@@ -86,7 +88,9 @@ public:
 	void stopNote(float velocity, bool allowTailOff) override
 	{
 		// Trigger the release phase of the ADSR
-		ampAdsr.noteOff();
+        ampAdsr.noteOff();
+        filterAdsr.noteOff();
+		filterAdsr.noteOff();
 
 		// signaling that this voice is now free process new sounds
         if (!allowTailOff || ( !ampAdsr.isActive() /*&& noiseOsc.envFinished()*/))
@@ -184,6 +188,7 @@ public:
         moogFilter.prepareToPlay(sampleRate);
         lfo.prepareToPlay(sampleRate);
         ampAdsr.prepareToPlay(sampleRate);
+        filterAdsr.prepareToPlay(sampleRate);
         mixer.prepareToPlay(sampleRate);
         noteNumber.reset(sampleRate, 0.001f);
 	}
@@ -245,21 +250,25 @@ public:
 	void setAttack(const float newValue)
 	{
         ampAdsr.setAttack(newValue);
+        filterAdsr.setAttack(newValue);
 	}
 
 	void setDecay(const float newValue)
 	{
         ampAdsr.setDecay(newValue);
+        filterAdsr.setDecay(newValue);
 	}
 
 	void setSustain(const float newValue)
 	{
         ampAdsr.setSustain(newValue);
+        filterAdsr.setSustain(newValue);
 	}
 
 	void setRelease(const float newValue)
 	{
         ampAdsr.setRelease(newValue);
+        filterAdsr.setRelease(newValue);
 	}
     
     void setSubReg(const int newValue)
@@ -357,7 +366,7 @@ private:
     void frequencyModulation(int startSample, int numSamples)
     {
         auto fmOsc1Data = frequencyBuffer.getArrayOfWritePointers();
-        ampAdsr.getEnvelopeBuffer(filterEnvBuffer, startSample, numSamples);
+        filterAdsr.getEnvelopeBuffer(filterEnvBuffer, startSample, numSamples);
         
         for (int i = startSample; i < numSamples; ++i)
         {
@@ -389,6 +398,7 @@ private:
     AudioBuffer<double> filterEnvBuffer;
 
 	MyADSR ampAdsr;         // double ADSR
+    MyADSR filterAdsr;      // EG used for the filter
     bool trigger = false;   // used for triggering the noise envelope
     Mixer mixer;
     
