@@ -1,7 +1,6 @@
 # Implementation of a virtual synthesizer optimized for super-saw sounds
 
-This is my thesis project in which I will be implementing a Super-Saw synthesizer.
-I will start optimizations and (hopefully) make use of the BLIP technique to lower aliasing once the main structure is ready.
+For my bachelor's thesis, I developed a synthesizer using the JUCE framework. The goal of this project was to create a VST-3-compliant audio plug-in that focused on optimizing super-saw sounds. To reduce aliasing and the artifact noise that comes with it, Band-Limited Impulse Trains (BLITs) were used in conjunction with oversampling. After implementing these two techniques, the aliasing levels became nearly imperceptible to the human ear, occurring predominantly below -50 dB.
 
 Student: Derin Donmez
 
