@@ -20,5 +20,7 @@ The generated sounds are then followed by the mixer, the Minimoog style low-pass
 This project was coded at **Laboratorio di Informatica Musicale (LIM)** — _the Music Informatics Laboratory_ of the Università degli Studi di Milano.
 
 **Student**: Derin Donmez
+
 **Supervisor**: Giorgio Presti
+
 **Co-Supervisor**: Federico Avanzini
